@@ -1,0 +1,10 @@
+{
+    "toolChain": "xilinx",
+    "prjName": {
+        "PL": "template"
+    },
+    "soc": {
+        "core": "none"
+    },
+    "device": "none"
+}
