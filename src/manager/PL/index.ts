@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 
 import { PLContext, XilinxOperation } from './xilinx';
+import { GowinOperation } from './gowin';
 import { BaseManage } from '../common';
 import { opeParam } from '../../global';
 import { ToolChainType } from '../../global/enum';
@@ -41,17 +42,23 @@ class PlManage extends BaseManage {
     constructor() {
         super();
 
-        this.context = { 
-            tool: opeParam.prjInfo.toolChain, 
+        // 按工具链分发操作类（当前支持 Xilinx / Gowin）
+        const toolChain = opeParam.prjInfo.toolChain;
+        const ope = toolChain === ToolChainType.Gowin ? new GowinOperation() : new XilinxOperation();
+
+        this.context = {
+            tool: toolChain,
             path: '',
-            ope: new XilinxOperation(),
+            ope,
             terminal: undefined,
             process: undefined
         };
 
         const curToolChain = this.context.tool;
         if (curToolChain === ToolChainType.Xilinx) {
-            this.context.path = this.context.ope.updateVivadoPath();
+            this.context.path = (this.context.ope as XilinxOperation).updateVivadoPath();
+        } else if (curToolChain === ToolChainType.Gowin) {
+            this.context.path = (this.context.ope as GowinOperation).updateGowinPath();
         }
 
         // Vivado 进程退出时，兜底清理运行状态，防止状态卡死

@@ -10,7 +10,8 @@ enum HdlLangID {
 enum ToolChainType {
     Xilinx = 'xilinx',
     Intel = 'intel',
-    Custom = 'custom'
+    Custom = 'custom',
+    Gowin = 'gowin'
 };
 
 enum LibraryState {
@@ -33,7 +34,8 @@ function validToolChainType(name: ToolChainType) {
     const allTypes = [
         'xilinx',
         'intel',
-        'custom'
+        'custom',
+        'gowin'
     ];
     return allTypes.includes(name);
 }

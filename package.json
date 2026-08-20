@@ -65,6 +65,11 @@
                     "default": "C:/Xilinx/Vivado/2018.3/bin",
                     "description": "%digital-ide.prj.vivado.install.path.title%"
                 },
+                "digital-ide.prj.gowin.install.path": {
+                    "type": "string",
+                    "default": "C:/Gowin/Gowin_V1.9.9.03_Education_x64/IDE/bin",
+                    "description": "Gowin EDA gw_sh.exe 所在目录"
+                },
                 "digital-ide.prj.modelsim.install.path": {
                     "type": "string",
                     "default": "C:/modeltech64_10.4/win64",
