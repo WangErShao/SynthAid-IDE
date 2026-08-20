@@ -18,9 +18,20 @@ import * as WaveView from './dide-viewer';
 import { ModuleDataItem } from './treeView/tree';
 import { downloadLsp, installLsp } from './lsp-client';
 import { hdlPath } from '../hdlFs';
+import { t } from '../i18n';
+import { MainOutput, ReportType } from '../global';
 
 function registerDocumentation(context: vscode.ExtensionContext) {
-    vscode.commands.registerCommand('digital-ide.hdlDoc.showWebview', async (uri: vscode.Uri) => {
+    vscode.commands.registerCommand('digital-ide.hdlDoc.showWebview', async (uri?: vscode.Uri) => {
+        // 从命令面板调用时不传 uri，回退到当前活动编辑器
+        if (!uri) {
+            uri = vscode.window.activeTextEditor?.document.uri;
+        }
+        if (!uri || !uri.fsPath) {
+            vscode.window.showWarningMessage(t('warn.hdl-doc.no-active-file'));
+            return;
+        }
+        MainOutput.report(`showWebview for ${uri.fsPath}`, { level: ReportType.Run });
         const standardPath = hdlPath.toSlash(uri.fsPath);
         const item = hdlDoc.docManager.get(standardPath);
         if (item) {
@@ -76,12 +87,41 @@ function registerTreeViewDataProvider(context: vscode.ExtensionContext) {
     vscode.window.registerTreeDataProvider('digital-ide-treeView-software', treeView.softwareTreeProvider);
     
     vscode.window.registerTreeDataProvider('digital-ide-treeView-arch', treeView.moduleTreeProvider);
+    vscode.window.registerTreeDataProvider('digital-ide-treeView-assistant', treeView.assistantTreeProvider);
+    vscode.window.registerTreeDataProvider('digital-ide-treeView-ip', treeView.ipCatalogTreeProvider);
     // vscode.window.registerTreeDataProvider('digital-ide-treeView-tool', treeView.toolTreeProvider);
 }
 
 function registerTreeView(context: vscode.ExtensionContext) {
     // constant used in tree
     vscode.commands.executeCommand('setContext', 'TOOL-tree-expand', false);
+
+    // HARD / SOFT / TOOL 树的点击分发器：双击才真正触发命令，防止单击误触
+    let lastCmd: string | undefined;
+    let lastTime = 0;
+    let timer: NodeJS.Timeout | undefined;
+    vscode.commands.registerCommand('digital-ide.treeView.dispatch', (cmd: string) => {
+        const now = Date.now();
+        if (cmd === lastCmd && now - lastTime < 350) {
+            // 350ms 内同一命令第二次点击 → 视为双击，执行
+            if (timer) {
+                clearTimeout(timer);
+            }
+            lastCmd = undefined;
+            lastTime = 0;
+            vscode.commands.executeCommand(cmd);
+        } else {
+            // 单击 → 记录并等待可能的第二次点击
+            lastCmd = cmd;
+            lastTime = now;
+            if (timer) {
+                clearTimeout(timer);
+            }
+            timer = setTimeout(() => {
+                lastCmd = undefined;
+            }, 350);
+        }
+    });
 
     // register command in tree
     vscode.commands.registerCommand('digital-ide.treeView.arch.expand', treeView.expandTreeView);
@@ -132,6 +172,9 @@ function registerToolCommands(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand('digital-ide.tool.export-filelist', (view: ModuleDataItem) => {
         tool.exportFilelist(view);
     });
+    vscode.commands.registerCommand('digital-ide.tool.analyze-log', (uri: vscode.Uri) => {
+        tool.analyzeLog(uri);
+    });
 }
 
 function registerFSM(context: vscode.ExtensionContext) {
@@ -159,6 +202,15 @@ function registerNetlist(context: vscode.ExtensionContext) {
             if (view.path && view.name) {
                 const uri = vscode.Uri.file(view.path);
                 Netlist.openNetlistViewer(context, uri, view.name);
+            }
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('digital-ide.netlist.vivado', (arg?: any) => {
+            const name = typeof arg === 'string' ? arg : arg?.name;
+            if (name) {
+                Netlist.openVivadoNetlistViewer(name);
             }
         })
     );

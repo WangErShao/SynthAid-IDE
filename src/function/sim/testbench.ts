@@ -27,6 +27,10 @@ function generateTestbenchFile(langID: HdlLangID, module: HdlModule) {
     }
 
     if (!temp) {
+        vscode.window.showErrorMessage(
+            `找不到 testbench 模板（${tbSrcPath}）或已有的 ${tbDisPath}。` +
+            '请确认插件安装完整（缺少 lib/testbench.v），或先手动创建 testbench.v。'
+        );
         return null;
     }
 
@@ -62,22 +66,30 @@ async function testbench() {
     const langID = hdlFile.getLanguageId(path);
 
     if (!hdlFile.isHDLFile(path)) {
+        vscode.window.showWarningMessage(`当前文件不是 HDL 文件，无法生成 testbench: ${path}`);
         return;
     }
-    // console.log(path);
-    
+
     const currentHdlFile = hdlParam.getHdlFile(path);
-    // console.log(currentHdlFile);
-    
     if (!currentHdlFile) {
-        vscode.window.showErrorMessage('There is no hdlFile respect to ' + path);
+        vscode.window.showWarningMessage(
+            `当前文件尚未被解析到模块信息（${path}）。` +
+            '请确认工程 LSP 解析正常（检查状态栏 linter 是否就绪），必要时保存文件或重新打开窗口后再试。'
+        );
         return;
     }
     const currentHdlModules = currentHdlFile.getAllHdlModules();
+    if (currentHdlModules.length === 0) {
+        vscode.window.showWarningMessage(
+            `文件 ${path} 未解析到任何模块，无法生成 testbench。` +
+            '请检查文件是否有语法错误导致模块未被识别。'
+        );
+        return;
+    }
     const items = getSelectItem(currentHdlModules);
     const select = await vscode.window.showQuickPick(items, option);
     if (select) {
-        generateTestbenchFile(langID, items[0].module);
+        generateTestbenchFile(langID, select.module);
     }
 }
 

@@ -135,12 +135,12 @@ class Output {
     }
 }
 
-const MainOutput = new Output('Digital-IDE');
-const LinterOutput = new Output('Digital-IDE Linter');
-const YosysOutput = new Output('Digital-IDE Yosys');
-const WaveViewOutput = new Output('Digital-IDE Wave Viewer');
-const HardwareOutput = new Output('Digital-IDE Hareware');
-const HardwareErrorOutput = new Output('Digital-IDE Hareware Error');
+const MainOutput = new Output('SynthAid-IDE');
+const LinterOutput = new Output('SynthAid-IDE Linter');
+const YosysOutput = new Output('SynthAid-IDE Yosys');
+const WaveViewOutput = new Output('SynthAid-IDE Wave Viewer');
+const HardwareOutput = new Output('SynthAid-IDE Hardware');
+const HardwareErrorOutput = new Output('SynthAid-IDE Hardware Error');
 
 export {
     ReportType,

@@ -74,7 +74,7 @@ export interface IDoPrimitivesJudgeParam {
 }
 
 export type DoFastFileType = 'common' | 'ip' | 'primitives';
-export type DoFastToolChainType = 'xilinx' | 'efinity' | 'intel';
+export type DoFastToolChainType = 'xilinx' | 'intel';
 
 export interface IDoFastParam {
     path: string,

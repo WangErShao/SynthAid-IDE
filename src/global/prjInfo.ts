@@ -10,7 +10,7 @@ import { PrjInfoSchema } from './propertySchema';
 import assert = require('assert');
 import * as hdlPath from '../hdlFs/path';
 import { hdlDir } from '../hdlFs';
-import { MainOutput } from './outputChannel';
+import { MainOutput, ReportType } from './outputChannel';
 import { t } from '../i18n';
 
 
@@ -168,6 +168,7 @@ class PrjInfo implements PrjInfoMeta {
     private readonly _soc: Soc = PrjInfoDefaults.soc;
 
     private _enableShowLog: boolean = PrjInfoDefaults.enableShowLog;
+    private _libCommonPathWarned: boolean = false;
     
     private _device: string = PrjInfoDefaults.device;
 
@@ -580,8 +581,11 @@ class PrjInfo implements PrjInfoMeta {
 
     public get libCommonPath(): AbsPath {
         const libPath = join(this._extensionPath, 'library');
-        if (!fs.existsSync(libPath)) {
-            vscode.window.showErrorMessage('common lib path: "' + libPath + '"  in extension is invalid, maybe extension has been corrupted, reinstall the extension');
+        if (!fs.existsSync(libPath) && !this._libCommonPathWarned) {
+            this._libCommonPathWarned = true;
+            MainOutput.report(`common lib path "${libPath}" in extension is invalid, library not packaged`, {
+                level: ReportType.Warn
+            });
         }
         return libPath;
     }

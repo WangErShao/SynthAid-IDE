@@ -11,6 +11,7 @@ import { hdlMonitor } from './monitor';
 import * as lspClient from './function/lsp-client';
 import { refreshArchTree } from './function/treeView';
 import { initialiseI18n, t } from './i18n';
+import { registerLintFix } from './function/lint-fix';
 
 
 async function registerCommand(context: vscode.ExtensionContext, packageJson: any) {
@@ -20,6 +21,7 @@ async function registerCommand(context: vscode.ExtensionContext, packageJson: an
     func.registerToolCommands(context);
     func.registerNetlist(context);
     func.registerWaveViewer(context);
+    registerLintFix(context);
 
     // onCommand 激活事件中的命令
     context.subscriptions.push(
@@ -43,7 +45,7 @@ function readPackageJson(context: vscode.ExtensionContext): any | undefined {
     const extensionPath = context.extensionPath;
     const packagePath = extensionPath + '/package.json';
     if (!fs.existsSync(packagePath)) {
-        vscode.window.showErrorMessage("Digital IDE 安装目录已经被污染，请重新安装！");
+        vscode.window.showErrorMessage("SynthAid-IDE 安装目录已经被污染，请重新安装！");
         return undefined;
     }
     const packageMeta = fs.readFileSync(packagePath, { encoding: 'utf-8' });

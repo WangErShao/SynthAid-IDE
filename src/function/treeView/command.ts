@@ -72,9 +72,11 @@ class BaseCommandTreeProvider implements vscode.TreeDataProvider<CommandDataItem
             vscode.TreeItemCollapsibleState.Collapsed
         );
         treeItem.contextValue = this.contextValue;
+        // 统一走 digital-ide.treeView.dispatch 分发器，由分发器做双击判定
         treeItem.command = {
             title: element.cmd,
-            command: element.cmd,
+            command: 'digital-ide.treeView.dispatch',
+            arguments: [element.cmd]
         };
 
         treeItem.tooltip = element.tip;
@@ -114,6 +116,11 @@ class HardwareTreeProvider extends BaseCommandTreeProvider {
                 cmd: 'digital-ide.hard.refresh',
                 icon: 'cmd',
                 tip: 'Refresh the current project file'
+            },
+            'TCL Console': {
+                cmd: 'digital-ide.tool.tcl-console',
+                icon: 'cmd',
+                tip: 'Open an interactive Vivado TCL console'
             },
             Build: {
                 cmd: 'digital-ide.hard.build',

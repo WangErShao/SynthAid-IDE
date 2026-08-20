@@ -31,6 +31,10 @@ export function registerManagerCommands(context: vscode.ExtensionContext) {
 
     // pl toolbox commands (hard tool in treeView)
     vscode.commands.registerCommand('digital-ide.hard.launch', () => plManage.launch());
+    vscode.commands.registerCommand('digital-ide.tool.tcl-console', () => plManage.openTclConsole());
+    vscode.commands.registerCommand('digital-ide.assistant.open-chat', () => plManage.openAssistantChat());
+    vscode.commands.registerCommand('digital-ide.ip-catalog.show', () => plManage.openIpCatalog());
+    vscode.commands.registerCommand('digital-ide.ip-catalog.preselect', (schemaId?: string) => plManage.openIpCatalog(schemaId));
     vscode.commands.registerCommand('digital-ide.hard.simulate', () => plManage.simulate());
     vscode.commands.registerCommand('digital-ide.hard.simulate.cli', () => plManage.simulateCli());
     vscode.commands.registerCommand('digital-ide.hard.simulate.gui', () => plManage.simulateGui());

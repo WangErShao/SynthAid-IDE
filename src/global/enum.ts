@@ -10,7 +10,6 @@ enum HdlLangID {
 enum ToolChainType {
     Xilinx = 'xilinx',
     Intel = 'intel',
-    Efinity = 'efinity',
     Custom = 'custom'
 };
 
@@ -34,7 +33,6 @@ function validToolChainType(name: ToolChainType) {
     const allTypes = [
         'xilinx',
         'intel',
-        'efinity',
         'custom'
     ];
     return allTypes.includes(name);

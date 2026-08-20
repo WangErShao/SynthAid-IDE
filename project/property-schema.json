@@ -7,8 +7,7 @@
 			"type": "string",
 			"description": "The tool chain you need",
 			"enum": [
-				"xilinx",
-				"efinity"
+				"xilinx"
 			]
 		},
 		"prjName": {

@@ -281,3 +281,5 @@ export async function runYsScript(context: vscode.ExtensionContext, uri: vscode.
 
     worker.terminate();
 }
+
+export { openVivadoNetlistViewer } from './vivadoView';

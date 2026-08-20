@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as fspath from 'path';
 
-import { opeParam, MainOutput, AbsPath } from '../../global';
+import { opeParam, MainOutput, AbsPath, ReportType } from '../../global';
 
 import { Count, MarkdownString, ThemeColorConfig, WavedromString } from './common';
 import { getRenderList, getCurrentRenderList } from './markdown';
@@ -206,9 +206,16 @@ async function showDocWebview(uri: vscode.Uri) {
 }
 
 function getWebviewContent(context: vscode.ExtensionContext, panel?: vscode.WebviewPanel): string | undefined {
-    const didedocPath = hdlPath.join(context.extensionPath, 'resources', 'dide-doc');
+    const didedocPath = hdlPath.join(context.extensionPath, 'resources', 'dide-doc', 'view');
     const htmlIndexPath = hdlPath.join(didedocPath, 'index.html');
-    const html = hdlFile.readFile(htmlIndexPath)?.replace(/(<link.+?href="|<script.+?src="|<img.+?src=")(.+?)"/g, (m, $1, $2) => {
+    const rawHtml = hdlFile.readFile(htmlIndexPath);
+    if (rawHtml === undefined) {
+        MainOutput.report(`cannot find doc webview html: ${htmlIndexPath}`, {
+            level: ReportType.Error
+        });
+        return undefined;
+    }
+    const html = rawHtml.replace(/(<link.+?href="|<script.+?src="|<img.+?src=")(.+?)"/g, (m, $1, $2) => {
         const absLocalPath = fspath.resolve(didedocPath, $2);
         const webviewUri = panel?.webview.asWebviewUri(vscode.Uri.file(absLocalPath));
         const replaceHref = $1 + webviewUri?.toString() + '"';
@@ -247,7 +254,10 @@ export async function makeDocWebview(uri: vscode.Uri, context: vscode.ExtensionC
                 vscode.commands.executeCommand('vscode.open', vscode.Uri.file(filePath));
                 return;
             case 'do-render':
-                const renderBody = await makeDocBody(uri, 'webview');                
+                const renderBody = await makeDocBody(uri, 'webview');
+                MainOutput.report(`doc do-render body length: ${renderBody.length} for ${uri.fsPath}`, {
+                    level: ReportType.Run
+                });
                 panel.webview.postMessage({
                     command: 'do-render',
                     body: renderBody

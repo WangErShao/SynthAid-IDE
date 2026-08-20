@@ -5,6 +5,8 @@ import { hdlFile, hdlPath } from '../../hdlFs';
 
 import { clean, hardwareTreeProvider, softwareTreeProvider, toolTreeProvider } from './command';
 import { moduleTreeProvider, ModuleDataItem  } from './tree';
+import { assistantTreeProvider } from './assistant';
+import { ipCatalogTreeProvider } from './ipCatalog';
 import { Range } from '../../hdlParser/common';
 import { MainOutput, opeParam, ReportType } from '../../global';
 import { t } from '../../i18n';
@@ -76,6 +78,13 @@ function refreshArchTree(element?: ModuleDataItem) {
     moduleTreeProvider.refresh(element);
 }
 
+/**
+ * @description 刷新 IP Catalog 树（新增/同步 IP 后调用）
+ */
+function refreshIpCatalogTree() {
+    ipCatalogTreeProvider.refresh();
+}
+
 function expandTreeView() {
     vscode.commands.executeCommand('setContext', 'TOOL-tree-expand', false);
 }
@@ -91,9 +100,12 @@ export {
     softwareTreeProvider,
     toolTreeProvider,
     moduleTreeProvider,
+    assistantTreeProvider,
+    ipCatalogTreeProvider,
     expandTreeView,
     collapseTreeView,
     openFileByUri,
     refreshArchTree,
+    refreshIpCatalogTree,
     clean
 };

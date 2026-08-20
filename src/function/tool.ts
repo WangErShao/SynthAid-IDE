@@ -3,11 +3,12 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as fspath from 'path';
 
-import { opeParam } from '../global';
+import { MainOutput, opeParam, ReportType } from '../global';
 import { hdlFile, hdlPath } from '../hdlFs';
 import { ModuleDataItem } from './treeView/tree';
 import { hdlParam } from '../hdlParser';
 import { t } from '../i18n';
+import { analyzeSynthLogAndShow } from './log-analysis';
 
 async function insertTextToUri(uri: vscode.Uri, text: string, position?: vscode.Position) {
     if (!position) {
@@ -181,8 +182,30 @@ function exportFilelist(view: ModuleDataItem) {
 
 }
 
+/**
+ * @description 手动分析一个 Vivado 日志文件（综合 / 实现皆可）
+ * @param uri 日志文件的 uri
+ */
+async function analyzeLog(uri?: vscode.Uri) {
+    if (!uri || !uri.fsPath) {
+        vscode.window.showWarningMessage(t('warn.synth-report.no-file'));
+        return;
+    }
+
+    const logPath = uri.fsPath;
+    MainOutput.report(t('info.synth-report.start', logPath), {
+        level: ReportType.Run
+    });
+
+    const result = await analyzeSynthLogAndShow(logPath);
+    if (result === undefined) {
+        vscode.window.showErrorMessage(t('warn.synth-report.log-not-found', logPath));
+    }
+}
+
 export {
     insertTextToUri,
     transformOldPpy,
-    exportFilelist
+    exportFilelist,
+    analyzeLog
 };

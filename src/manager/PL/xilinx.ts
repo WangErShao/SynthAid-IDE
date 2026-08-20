@@ -36,7 +36,13 @@ interface PLContext {
     // 第三方工具运行路径
     path? : string,
     // 操作类
-    ope : Record<string, any>
+    ope : Record<string, any>,
+    // 运行完成回调（synth / impl），用于结束后自动分析对应日志
+    onRunComplete?: (run: 'synth' | 'impl') => void,
+    // 进程退出回调，用于上层兜底清理运行状态
+    onProcessExit?: () => void,
+    // 进程输出回调，用于转发到 TCL 控制台等交互界面
+    onOutput?: (text: string) => void
 };
 
 interface PLPrjInfo {
@@ -185,6 +191,9 @@ class XilinxOperation {
         const _this = this;
         
         const onVivadoClose = debounce(() => {
+            context.onProcessExit?.();
+            // 进程已退出，清空引用，否则会导致重复 Launch 被误判为"已在运行"
+            context.process = undefined;
             _this.onVivadoClose();
         }, 100);
 
@@ -196,6 +205,8 @@ class XilinxOperation {
             const vivadoPids = new Set<number>(pids);
             const vivadoProcess = spawn(cmd, [], { shell: true, stdio: 'pipe', cwd: opeParam.workspacePath });
             let status: 'pending' | 'fulfilled' = 'pending';
+            // 用于检测综合完成哨兵，防止哨兵字符串被拆分成多个数据块
+            let doneBuffer = '';
 
             vivadoProcess.on('close', () => {
                 onVivadoClose();            
@@ -209,7 +220,9 @@ class XilinxOperation {
 
             return new Promise(resolve => {
                 vivadoProcess.stdout.on('data', async data => {
-                    const message: string = _this.handleMessage(data.toString(), status);                                        
+                    const text: string = data.toString();
+                    const message: string = _this.handleMessage(text, status);
+                    context.onOutput?.(text);
                     if (status === 'pending') {
                         HardwareOutput.clear();
                         HardwareOutput.show();
@@ -224,9 +237,19 @@ class XilinxOperation {
                         level: ReportType.Info
                     });
                     status = 'fulfilled';
+
+                    // 检测运行完成哨兵，触发对应日志分析
+                    doneBuffer += text;
+                    const doneRe = /DIDE_RUN_DONE:(synth|impl)/g;
+                    let doneMatch: RegExpExecArray | null;
+                    while ((doneMatch = doneRe.exec(doneBuffer)) !== null) {
+                        context.onRunComplete?.(doneMatch[1] === 'impl' ? 'impl' : 'synth');
+                    }
+                    doneBuffer = doneBuffer.replace(/DIDE_RUN_DONE:(synth|impl)/g, '');
                 });
 
                 vivadoProcess.stderr.on('data', async data => {
+                    context.onOutput?.(data.toString());
                     HardwareOutput.report(data.toString(), {
                         level: ReportType.Error
                     });
@@ -347,7 +370,7 @@ class XilinxOperation {
         scripts.push(`update_ip_catalog -quiet`);
 
         // 导入bd设计源文件
-        if (hdlFile.isHasAttr(this.prjConfig, "soc.bd")) {
+        if (hdlFile.isHasAttr(this.prjConfig, "soc.bd") && this.prjConfig.soc.bd) {
             const bd = this.prjConfig.soc.bd;
             const bdFile = bd + '.bd';
             let bdSrcPath = hdlPath.join(this.xbdPath, bdFile);
@@ -566,11 +589,6 @@ file delete ${scriptPath} -force\n`;
     }
 
     public synth(context: PLContext) {
-        vscode.window.showInformationMessage(
-            "Xilinx: Synth",
-            { title: 'ok', value: true }
-        );
-
         let quietArg = '';
         if (opeParam.prjInfo.enableShowLog) {
             quietArg = '-quiet';
@@ -579,17 +597,25 @@ file delete ${scriptPath} -force\n`;
         let script = '';
         script += `reset_run synth_1 ${quietArg};`;
         script += `launch_runs synth_1 ${quietArg} -jobs 4;`;
-        script += `wait_on_run synth_1 ${quietArg}`;
+        script += `wait_on_run synth_1 ${quietArg};`;
+        // 综合完成后输出哨兵，供插件检测并触发综合日志分析
+        script += `puts "DIDE_RUN_DONE:synth";`;
 
         context.process?.stdin.write(script + '\n');
     }
 
-    impl(context: PLContext) {
-        vscode.window.showInformationMessage(
-            "Xilinx: Impl",
-            { title: 'ok', value: true }
-        );
+    /**
+     * @description 获取运行日志文件路径
+     *
+     * 日志位于 ${prjPath}/xilinx/${prjName}.runs/${run}_1/runme.log
+     * @param run synth / impl
+     */
+    public getRunLogPath(run: 'synth' | 'impl'): AbsPath {
+        const runDir = run === 'impl' ? 'impl_1' : 'synth_1';
+        return hdlPath.join(this.prjInfo.path, this.prjInfo.name + '.runs', runDir, 'runme.log');
+    }
 
+    public impl(context: PLContext) {
         let quietArg = '';
         if (opeParam.prjInfo.enableShowLog) {
             quietArg = '-quiet';
@@ -600,16 +626,14 @@ file delete ${scriptPath} -force\n`;
         script += `launch_runs impl_1 ${quietArg} -jobs 4;`;
         script += `wait_on_run impl_1 ${quietArg};`;
         script += `open_run impl_1 ${quietArg};`;
-        script += `report_timing_summary ${quietArg}`;
+        script += `report_timing_summary ${quietArg};`;
+        // 实现完成后输出哨兵，供插件检测并触实现日志分析
+        script += `puts "DIDE_RUN_DONE:impl";`;
 
         context.process?.stdin.write(script + '\n');
     }
 
     build(context: PLContext) {
-        vscode.window.showInformationMessage(
-            "Xilinx: Build",
-            { title: 'ok', value: true }
-        );
         let quietArg = '';
         if (this.prjConfig.enableShowLog) {
             quietArg = '-quiet';
@@ -619,11 +643,13 @@ file delete ${scriptPath} -force\n`;
         script += `reset_run synth_1 ${quietArg}\n`;
         script += `launch_runs synth_1 ${quietArg} -jobs 4\n`;
         script += `wait_on_run synth_1 ${quietArg}\n`;
+        script += `puts "DIDE_RUN_DONE:synth"\n`;
         script += `reset_run impl_1 ${quietArg}\n`;
         script += `launch_runs impl_1 ${quietArg} -jobs 4\n`;
         script += `wait_on_run impl_1 ${quietArg}\n`;
         script += `open_run impl_1 ${quietArg}\n`;
         script += `report_timing_summary ${quietArg}\n`;
+        script += `puts "DIDE_RUN_DONE:impl"\n`;
 
         this.generateBit(context);
 

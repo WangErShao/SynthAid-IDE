@@ -13,13 +13,14 @@ out-js
 src
 script
 resources/**/*.js
+!resources/dide-doc/view/js/**
 resources/**/*.d.ts
 resources/**/*.wasm
 resources/**/*.tar.gz
-resources/dide-lsp/server
 tsconfig.json
 design
 lib
+!lib/testbench.v
 *.vcd
 *.zip
 figures

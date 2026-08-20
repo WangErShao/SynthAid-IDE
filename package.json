@@ -1,10 +1,10 @@
 {
-    "name": "fpga-support",
-    "displayName": "Digital IDE",
+    "name": "synthaid-ide",
+    "displayName": "SynthAid-IDE",
     "description": "all in one vscode plugin for Verilog/VHDL development",
-    "publisher": "sterben",
-    "homepage": "https://digital-eda.github.io/DIDE-doc-Cn",
-    "version": "0.4.6",
+    "publisher": "SynthAid",
+    "homepage": "https://github.com/WangErShao/SynthAid-IDE",
+    "version": "0.1.1",
     "main": "./out/extension",
     "l10n": "./l10n",
     "icon": "images/icon.png",
@@ -26,7 +26,7 @@
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/Digital-EDA/Digital-IDE"
+        "url": "https://github.com/WangErShao/SynthAid-IDE"
     },
     "categories": [
         "Extension Packs",
@@ -38,7 +38,7 @@
     ],
     "contributes": {
         "configuration": {
-            "title": "Digital-IDE",
+            "title": "SynthAid-IDE",
             "properties": {
                 "digital-ide.welcome.show": {
                     "type": "boolean",
@@ -64,11 +64,6 @@
                     "type": "string",
                     "default": "C:/Xilinx/Vivado/2018.3/bin",
                     "description": "%digital-ide.prj.vivado.install.path.title%"
-                },
-                "digital-ide.prj.efinix.install.path": {
-                    "type": "string",
-                    "default": "C:/Efinity/2023.2/bin",
-                    "description": "%digital-ide.prj.efinix.install.path.title%"
                 },
                 "digital-ide.prj.modelsim.install.path": {
                     "type": "string",
@@ -353,6 +348,91 @@
                         "%digital-ide.function.netlist.schema-mode.2.title%"
                     ],
                     "description": "%digital-ide.function.netlist.schema-mode.title%"
+                },
+                "digital-ide.assistant.apiBase": {
+                    "type": "string",
+                    "default": "https://api.deepseek.com/v1",
+                    "description": "%digital-ide.assistant.apiBase.title%"
+                },
+                "digital-ide.assistant.apiKey": {
+                    "type": "string",
+                    "default": "",
+                    "description": "%digital-ide.assistant.apiKey.title%"
+                },
+                "digital-ide.assistant.model": {
+                    "type": "string",
+                    "default": "deepseek-v4-pro",
+                    "description": "%digital-ide.assistant.model.title%"
+                },
+                "digital-ide.assistant.systemPrompt": {
+                    "type": "string",
+                    "default": "You are an expert FPGA design assistant integrated into SynthAid-IDE. You can inspect the live Vivado design session via the run_vivado_tcl tool. Be concise and thorough.",
+                    "description": "%digital-ide.assistant.systemPrompt.title%"
+                },
+                "digital-ide.assistant.temperature": {
+                    "type": "number",
+                    "default": 0.7,
+                    "description": "%digital-ide.assistant.temperature.title%"
+                },
+                "digital-ide.assistant.maxTokens": {
+                    "type": "number",
+                    "default": 4096,
+                    "description": "%digital-ide.assistant.maxTokens.title%"
+                },
+                "digital-ide.assistant.maxToolRounds": {
+                    "type": "number",
+                    "default": 10,
+                    "description": "%digital-ide.assistant.maxToolRounds.title%"
+                },
+                "digital-ide.assistant.injectRtlContext": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "%digital-ide.assistant.injectRtlContext.title%"
+                },
+                "digital-ide.assistant.thinking": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "%digital-ide.assistant.thinking.title%"
+                },
+                "synthaid-ide.lintFix.enable": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable lint auto-fix (lightbulb suggestions)"
+                },
+                "synthaid-ide.lintFix.vivadoOnSave": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Run Vivado synth_design -rtl check on save (debounced)"
+                },
+                "synthaid-ide.lintFix.agentEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable LLM-based lint fixing (falls back to rule-only if no API key)"
+                },
+                "synthaid-ide.lintFix.maxIterations": {
+                    "type": "number",
+                    "default": 3,
+                    "description": "Max LLM auto-fix iterations before giving up"
+                },
+                "synthaid-ide.lintFix.onlyUserDir": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Only allow LLM fixes in user/ directory"
+                },
+                "synthaid-ide.lintFix.verible.path": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to verible-verilog-lint executable"
+                },
+                "synthaid-ide.lintFix.vivado.path": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Path to vivado executable (batch mode)"
+                },
+                "synthaid-ide.lintFix.thinking": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable LLM reasoning during lint fixes (slower but more capable; disable for ~4-16x faster)"
                 }
             }
         },
@@ -360,27 +440,27 @@
             {
                 "command": "digital-ide.property-json.generate",
                 "title": "%digital-ide.property-json.generate.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.property-json.overwrite",
                 "title": "%digital-ide.property-json.overwrite.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.hdlDoc.exportFile",
                 "title": "%digital-ide.hdlDoc.exportFile.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.hdlDoc.exportProject",
                 "title": "%digital-ide.hdlDoc.exportProject.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.hdlDoc.showWebview",
                 "title": "%digital-ide.hdlDoc.showWebview.title%",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": {
                     "light": "images/svg/light/documentation.svg",
                     "dark": "images/svg/dark/documentation.svg"
@@ -389,17 +469,17 @@
             {
                 "command": "digital-ide.tool.instance",
                 "title": "%digital-ide.tool.instance.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.tool.testbench",
                 "title": "%digital-ide.tool.testbench.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.tool.icarus.simulateFile",
                 "title": "%digital-ide.tool.icarus.simulateFile.title%",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": {
                     "light": "images/svg/light/debug.svg",
                     "dark": "images/svg/dark/debug.svg"
@@ -408,11 +488,40 @@
             {
                 "command": "digital-ide.tool.export-filelist",
                 "title": "%digital-ide.tool.export-filelist.title%",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": {
                     "light": "images/svg/light/export.svg",
                     "dark": "images/svg/dark/export.svg"
                 }
+            },
+            {
+                "command": "digital-ide.tool.analyze-log",
+                "title": "%digital-ide.tool.analyze-log.title%",
+                "category": "SynthAid-IDE"
+            },
+            {
+                "command": "digital-ide.tool.tcl-console",
+                "title": "%digital-ide.tool.tcl-console.title%",
+                "category": "SynthAid-IDE"
+            },
+            {
+                "command": "digital-ide.assistant.open-chat",
+                "title": "%digital-ide.assistant.open-chat.title%",
+                "category": "SynthAid-IDE"
+            },
+            {
+                "command": "digital-ide.ip-catalog.show",
+                "title": "%digital-ide.ip-catalog.show.title%",
+                "category": "SynthAid-IDE",
+                "icon": {
+                    "light": "images/svg/light/ip.svg",
+                    "dark": "images/svg/dark/ip.svg"
+                }
+            },
+            {
+                "command": "digital-ide.ip-catalog.preselect",
+                "title": "%digital-ide.ip-catalog.preselect.title%",
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.pickLibrary",
@@ -421,134 +530,134 @@
                     "light": "images/svg/light/library.svg",
                     "dark": "images/svg/dark/library.svg"
                 },
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.treeView.arch.expand",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": "$(expand-all)",
                 "title": "%digital-ide.treeView.arch.expand.title%"
             },
             {
                 "command": "digital-ide.treeView.arch.collapse",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": "$(collapse-all)",
                 "title": "%digital-ide.treeView.arch.collapse.title%"
             },
             {
                 "command": "digital-ide.treeView.arch.refresh",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": "$(refresh)",
                 "title": "%digital-ide.treeView.arch.refresh.title%"
             },
             {
                 "command": "digital-ide.treeView.arch.openFile",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.treeView.arch.openFile.title%"
             },
             {
                 "command": "digital-ide.soft.launch",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.soft.launch.title%"
             },
             {
                 "command": "digital-ide.soft.build",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.soft.build.title%"
             },
             {
                 "command": "digital-ide.soft.download",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.soft.download.title%"
             },
             {
                 "command": "digital-ide.hard.launch",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.launch.title%"
             },
             {
                 "command": "digital-ide.hard.simulate",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.simulate.title%"
             },
             {
                 "command": "digital-ide.hard.simulate.cli",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.simulate.cli.title%"
             },
             {
                 "command": "digital-ide.hard.simulate.gui",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.simulate.gui.title%"
             },
             {
                 "command": "digital-ide.hard.refresh",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.refresh.title%"
             },
             {
                 "command": "digital-ide.hard.build",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.build.title%"
             },
             {
                 "command": "digital-ide.hard.build.synth",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.build.synth.title%"
             },
             {
                 "command": "digital-ide.hard.build.impl",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.build.impl.title%"
             },
             {
                 "command": "digital-ide.hard.build.bitstream",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.build.bitstream.title%"
             },
             {
                 "command": "digital-ide.hard.program",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.program.title%"
             },
             {
                 "command": "digital-ide.hard.gui",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.gui.title%"
             },
             {
                 "command": "digital-ide.hard.exit",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.hard.exit.title%"
             },
             {
                 "command": "digital-ide.pl.setSrcTop",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.pl.setSrcTop.title%"
             },
             {
                 "command": "digital-ide.pl.setSimTop",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.pl.setSimTop.title%"
             },
             {
                 "command": "digital-ide.pl.addDevice",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.pl.addDevice.title%"
             },
             {
                 "command": "digital-ide.pl.delDevice",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.pl.delDevice.title%"
             },
             {
                 "command": "digital-ide.pl.addFile",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.pl.addFile.title%"
             },
             {
                 "command": "digital-ide.pl.delFile",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.pl.delFile.title%"
             },
             {
@@ -557,7 +666,7 @@
                     "light": "images/svg/light/netlist.svg",
                     "dark": "images/svg/dark/netlist.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.netlist.title%"
             },
             {
@@ -566,7 +675,7 @@
                     "light": "images/svg/light/ys.svg",
                     "dark": "images/svg/dark/ys.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.run-ys.title%"
             },
             {
@@ -575,53 +684,53 @@
                     "light": "images/svg/light/fsm.svg",
                     "dark": "images/svg/dark/fsm.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.fsm.title%"
             },
             {
                 "command": "digital-ide.lsp.tool.insertTextToUri",
                 "title": "%digital-ide.lsp.tool.insertTextToUri.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.lsp.tool.transformOldPropertyFile",
                 "title": "%digital-ide.lsp.tool.transformOldPropertyFile.title%",
-                "category": "Digital-IDE"
+                "category": "SynthAid-IDE"
             },
             {
                 "command": "digital-ide.lsp.vlog.linter.pick",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.lsp.vlog.linter.pick.title%"
             },
             {
                 "command": "digital-ide.lsp.svlog.linter.pick",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.lsp.svlog.linter.pick.title%"
             },
             {
                 "command": "digital-ide.lsp.vhdl.linter.pick",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.lsp.vhdl.linter.pick.title%"
             },
             {
                 "command": "digital-ide.lsp.systemverilog.linter.pick",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.lsp.systemverilog.linter.pick.title%"
             },
             {
                 "command": "digital-ide.digital-lsp.download",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.digital-lsp.download.title%"
             },
             {
                 "command": "digital-ide.digital-lsp.install",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.digital-lsp.install.title%"
             },
             {
                 "command": "digital-ide.vhdl2vlog",
                 "title": "%digital-ide.vhdl2vlog.title%",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "icon": {
                     "light": "images/svg/light/translate.svg",
                     "dark": "images/svg/dark/translate.svg"
@@ -633,7 +742,7 @@
                     "light": "images/svg/light/fsm.svg",
                     "dark": "images/svg/dark/fsm.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.fsm.show.title%"
             },
             {
@@ -642,7 +751,7 @@
                     "light": "images/svg/light/netlist.svg",
                     "dark": "images/svg/dark/netlist.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.netlist.show.title%"
             },
             {
@@ -651,8 +760,17 @@
                     "light": "images/svg/light/netlist.svg",
                     "dark": "images/svg/dark/netlist.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "test"
+            },
+            {
+                "command": "digital-ide.netlist.vivado",
+                "icon": {
+                    "light": "images/svg/light/netlist.svg",
+                    "dark": "images/svg/dark/netlist.svg"
+                },
+                "category": "SynthAid-IDE",
+                "title": "%digital-ide.netlist.vivado.title%"
             },
             {
                 "command": "digital-ide.waveviewer.show",
@@ -660,18 +778,38 @@
                     "light": "images/svg/light/vcd.svg",
                     "dark": "images/svg/dark/vcd.svg"
                 },
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.waveviewer.show.title%"
             },
             {
                 "command": "digital-ide.tool.clean",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.tool.clean.title%"
             },
             {
                 "command": "digital-ide.structure.from-xilinx-to-standard",
-                "category": "Digital-IDE",
+                "category": "SynthAid-IDE",
                 "title": "%digital-ide.structure.from-xilinx-to-standard.title%"
+            },
+            {
+                "command": "synthaid-ide.lintFix.vivado",
+                "category": "SynthAid-IDE",
+                "title": "%synthaid-ide.lintFix.vivado.title%"
+            },
+            {
+                "command": "synthaid-ide.lintFix.ai-fix",
+                "category": "SynthAid-IDE",
+                "title": "%synthaid-ide.lintFix.ai-fix.title%"
+            },
+            {
+                "command": "synthaid-ide.lintFix.debug",
+                "category": "SynthAid-IDE",
+                "title": "Debug Lint Fix（诊断修复管线）"
+            },
+            {
+                "command": "synthaid-ide.lintFix.apply",
+                "category": "SynthAid-IDE",
+                "title": "%synthaid-ide.lintFix.apply.title%"
             }
         ],
         "menus": {
@@ -708,6 +846,11 @@
                     "args": {
                         "file": "${viewItem}"
                     }
+                },
+                {
+                    "command": "digital-ide.netlist.vivado",
+                    "group": "navigation@5",
+                    "when": "view == digital-ide-treeView-arch && viewItem == file"
                 },
                 {
                     "command": "digital-ide.pl.setSrcTop",
@@ -761,6 +904,11 @@
                     "when": "editorLangId == ys",
                     "command": "digital-ide.netlist.run-ys",
                     "group": "navigation@1"
+                },
+                {
+                    "when": "resourceExtname == .log",
+                    "command": "digital-ide.tool.analyze-log",
+                    "group": "navigation@7"
                 }
             ],
             "editor/context": [
@@ -810,6 +958,11 @@
                     "when": "resourceLangId == verilog || resourceLangId == systemverilog || resourceLangId == vhdl",
                     "command": "digital-ide.hdlDoc.exportFile",
                     "group": "navigation@13"
+                },
+                {
+                    "when": "resourceExtname == .log",
+                    "command": "digital-ide.tool.analyze-log",
+                    "group": "navigation@14"
                 }
             ]
         },
@@ -833,7 +986,7 @@
                 {
                     "id": "TreeView",
                     "title": "%digital-ide.treeview%",
-                    "icon": "images/svg/view.svg"
+                    "icon": "images/svg/synthaid.svg"
                 }
             ]
         },
@@ -857,6 +1010,16 @@
                 {
                     "id": "digital-ide-treeView-software",
                     "name": "SOFT Options",
+                    "icon": "images/svg/view.svg"
+                },
+                {
+                    "id": "digital-ide-treeView-assistant",
+                    "name": "SMART Options",
+                    "icon": "images/svg/view.svg"
+                },
+                {
+                    "id": "digital-ide-treeView-ip",
+                    "name": "IP Catalog",
                     "icon": "images/svg/view.svg"
                 }
             ]
@@ -1256,7 +1419,7 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "webpack --mode production",
+        "vscode:prepublish": "tsc -p tsconfig.build.json && webpack --mode production",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
         "pretest": "npm run compile && npm run lint",
@@ -1272,6 +1435,7 @@
         "@typescript-eslint/eslint-plugin": "^5.42.0",
         "@typescript-eslint/parser": "^5.42.0",
         "@vscode/test-electron": "^2.2.0",
+        "@vscode/vsce": "^3.9.2",
         "eslint": "^8.26.0",
         "mocha": "^10.1.0",
         "typescript": "^4.8.4",

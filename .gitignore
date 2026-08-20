@@ -22,3 +22,18 @@ resources/dide-netlist/view/*
 resources/script
 scripts/update-icon.py
 scripts/vscode-package.py
+
+# 本机开发配置（含私有路径）
+.vscode/settings.json
+
+# 测试/演示临时文件
+demo/
+lib/
+
+# 公众号内容产物（文章/图/预览截图），不进入源码仓库
+doc/公众号文章_*.md
+doc/公众号文章_*.html
+doc/article*.png
+doc/cover*.png
+doc/demo*.png
+doc/synthaid_guide/
