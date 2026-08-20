@@ -1,53 +1,103 @@
-<div align="center">
-<img src="./images/icon.png"/>
+# SynthAid-IDE
 
-## <code>Digital IDE</code> | All in one <code>vscode</code> plugin for Verilog/VHDL development
+> 面向 FPGA / 数字逻辑开发的 VSCode 一体化插件 —— 基于 **Digital IDE 0.4.6** 创建，当前版本 **0.1.0**。
 
+**SynthAid-IDE** 深度集成 Xilinx Vivado 工具链，提供从 HDL 编写、解析、仿真、综合实现，
+到日志分析、AI 助手、波形/网表可视化的完整工作流。
 
-[Document (New)](https://nc-ai.cn/en/) | [中文文档 (New)](https://nc-ai.cn/) | [Bilibili Video](https://www.bilibili.com/video/BV1L19HYcEz6/?spm_id_from=333.1387.list.card_archive.click) | [Github](https://github.com/Digital-EDA/Digital-IDE)
+本插件基于开源的 [Digital IDE 0.4.6](https://github.com/Digital-EDA/Digital-IDE) 二次开发并持续增强。
 
-![](https://img.shields.io/badge/version-0.4.2-purple)
-![](https://img.shields.io/badge/Verilog-support-green)
-![](https://img.shields.io/badge/VHDL-support-green)
-![](https://img.shields.io/badge/SystemVerilog-support-green)
+---
 
-</div>
+## 功能特性
 
-## Features
+### 1. 语言服务（Rust 解析器）
+- 支持 **Verilog / VHDL / SystemVerilog**，由 Rust 编写的解析器与语言服务器提供：
+  - 自动补全（模块例化、端口、参数）
+  - 格式化（Verilog 多风格：kr/ansi/gnu；VHDL 可配置）
+  - 语法诊断（linter 可选：iverilog / Vivado / ModelSim / Verilator / Verible）
+- 语法高亮与工程图标覆盖 `.v / .sv / .vhd / .xdc / .tcl / .vvp / .vcd` 等
 
-**Rewritten Parser and Language Services in Rust**: Supports Verilog, VHDL, and SystemVerilog with faster performance and more stable services.
+### 2. 综合 / 实现日志分析
+- 综合（Synth）、实现（Impl）结束后**自动弹出分析报告**：
+  - 运行状态（成功 / 失败）+ 错误 / 严重警告 / 警告统计（按 ID 聚合去重，显示次数）
+  - **资源利用率**（从 `utilization_*.rpt` 解析：LUT / Reg / DSP / BRAM 等）
+  - **时序信息**（WNS / TNS / WHS / THS、时钟汇总表、每时钟域 WNS/TNS、违例路径数）
+  - 性能（运行耗时 / 峰值内存）
+  - 消息详情支持点击 `文件:行号` 跳转
+- 支持手动右键任意 `.log` 文件分析
 
-![](./figures/lsp.png)
+### 3. AI 助手（SMART Options）
+- **AI 聊天面板**：与 LLM 对话，支持任意 OpenAI 兼容 API（默认 DeepSeek）
+- **RTL 上下文注入**：自动把离线解析的设计结构（工程 / 顶层 / 各模块端口 / 参数 / 例化）注入给 LLM，
+  直接基于事实回答结构性问题
+- **工具调用**：LLM 可在当前 Vivado 会话中执行 TCL 查询（`get_cells`、`report_utilization`、`report_timing_summary` 等）
+- 支持历史对话、清空、设置面板
 
-**Improved Documentation**: Provides more direct and faster access to basic information and dependencies of the current HDL file. Supports Wavedrom-style comments and renders them into visual diagrams.
+### 4. Vivado TCL 控制台
+- 交互式 TCL 控制台，直连常驻 Vivado 进程
+- 命令结果自动回显（`catch + puts` 包装），`↑/↓` 翻历史
+- 运行中命令自动排队提示
 
-![](./figures/doc.png)
+### 5. 工程与工具链（侧边栏）
+- 标准工程结构（`user/src`、`user/sim`、`user/data`）+ Xilinx 工程结构转换
+- 侧边栏 **HARD / SOFT / SMART Options**：
+  - **Launch** 启动 Vivado、**Synth**、**Impl**、**Build**、**BitStream**、**Program** 一键操作
+  - **双击触发**，防止误触
+  - **运行状态保护**：运行中禁止重复操作 + 进度提示 + 进程退出兜底
 
-**New VCD Renderer**: Added top toolbar, system beacon, and other components; supports drag-and-drop and grouping of selected signals in the left panel, as well as selecting multiple signals by holding Shift for addition and deletion; supports establishing a relative coordinate system based on system beacons; the top toolbar supports base conversion for displayed numbers of selected signals, rendering mode switching, and rendering signals as analog values.
+### 6. 可视化
+- **HDL 文档**：当前文件模块 / 端口 / 参数 / 依赖文档，支持导出 **HTML / Markdown / PDF**，Wavedrom 注释渲染为波形图
+- **VCD 波形查看器**：拖拽分组、多选、进制切换、模拟量渲染
+- **网表渲染器**（支持 Yosys 脚本）、**FSM 状态机查看器**
 
-![](./figures/vcd.png)
+### 7. 仿真与生成
+- Icarus Verilog 仿真（单文件 / 工程）
+- 模块**例化模板**自动生成（`Alt+I`）、**testbench** 自动生成（`Alt+T`）
+- VHDL → Verilog 翻译
 
-- Brand New Netlist Renderer
+### 8. Lint 自动修复
+- 存盘自动跑 **Verible** lint，出错行 💡 一键修复
+- **本地确定性规则**（毫秒级）：参数列表缺分号、`end` 缺分号、行尾空格
+- **LLM 兜底**：复杂错误交给 DeepSeek（默认关闭推理，~1s）
+- `Debug Lint Fix` 命令可逐环节诊断修复管线
 
-![](./figures/netlist.png)
+---
 
-## New 0.4.2
-- Added comprehensive support for VHDL & SV (file tree, LSP, etc.)
-- Added workspace icons for languages or generated files such as Verilog, VHDL, XDC, TCL, VVP, VCD, etc.
-- Added support for Vivado, ModelSim, and Verilator. Users can use these third-party tools for simulation and auto-correction by setting `function.lsp.linter.vhdl.diagnostor` (for VHDL) and `function.lsp.linter.vlog.diagnostor` (for Verilog).
-- Added LSP and syntax highlighting support for scripts like TCL, XDC, and VVP.
+## 快速开始
 
-## Changes
-- Display the plugin's working status in the status bar at the bottom of VSCode, making it easier for users to understand the current settings.
-- The bottom-right corner of the status bar now shows the currently selected linter and whether it is functioning properly.
-- Optimized project configuration directory.
-- Improved auto-completion performance.
+1. 安装插件，打开工程文件夹（需包含 `.vscode/property.json`，可用命令 `SynthAid-IDE: 生成 property.json`）
+2. HARD 树 → **Launch** 启动 Vivado → **Synth / Impl / Build** 构建，自动弹出日志分析
+3. SMART Options → **AI Chat** 打开 AI 助手（先在设置 `digital-ide.assistant.*` 配置 API Key / 模型）
 
-## Bug Fixes
-- Fixed a bug where comments on `input` and `output` were not displayed correctly in the documentation.
-- Fixed a bug in the Icarus Verilog simulation feature where duplicate paths were included as compilation parameters.
-- Fixed a bug in the Icarus Verilog simulation feature where adding or removing <code>include</code> would cause simulation compilation to fail (the `instModPathStatus` property of the instance was not updated).
-- Fixed simulation issues with Icarus Verilog version 12
-- Fixed the issue of being unable to import Block Design (BD) during Vivado project generation
-- Fixed the issue where libraries in custom mode could not be imported into Vivado
-- Fixed other known bugs.
+## 教程
+
+- [快速上手与安装](doc/tutorial-quickstart.md)
+- [Vivado TCL 控制台使用](doc/tutorial-tcl-console.md)
+- [AI 助手聊天使用](doc/tutorial-ai-chat.md)
+- [Lint 自动修复](doc/tutorial-lint-fix.md)
+
+## 开发 / 构建
+
+```bash
+npm install          # 安装依赖
+npm run compile      # tsc 编译 src → out（开发调试用）
+npm run watch        # 增量编译
+npm run lint         # eslint
+npx vsce package     # 打包 vsix（自动执行 vscode:prepublish）
+```
+
+> **构建注意**：`vscode:prepublish` 为 `tsc -p tsconfig.build.json && webpack --mode production`
+> ——先编译 `src → out-js`，再 webpack 打成单文件 `out/extension.js`（运行时入口，含打包的
+> node_modules）。**改源码后必须重新打包 vsix 才生效**，仅 `npm run compile` 不会更新运行时。
+
+## 下载与发布
+
+- 当前版本：**0.1.0**
+- VSIX 发布到 [GitHub Releases](https://github.com/WangErShao/SynthAid-IDE/releases)
+- 源码仓库：https://github.com/WangErShao/SynthAid-IDE
+
+## 说明
+
+- Rust 语言服务器（LSP）随插件内置，无需联网下载
+- 基于 MIT 协议的 [Digital IDE 0.4.6](https://github.com/Digital-EDA/Digital-IDE) 创建，保留原作者版权声明
