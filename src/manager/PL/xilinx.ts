@@ -549,8 +549,8 @@ start_gui -quiet
 file delete ${scriptPath} -force\n`;
 
         hdlFile.writeFile(scriptPath, script);
-        const cmd = `source ${scriptPath} -quiet`;
-        
+        const cmd = `source ${scriptPath}`;
+
         HardwareOutput.report('simulateGui');
         context.process?.stdin.write(cmd + '\n');
     }
@@ -564,9 +564,9 @@ file delete ${scriptPath} -force\n`;
         const scriptPath = hdlPath.join(this.xilinxPath, 'simulate.tcl');
         const script = `
 if {[current_sim] != ""} {
-    relaunch_sim -quiet
+    relaunch_sim
 } else {
-    launch_simulation -quiet
+    launch_simulation
 }
 
 set curr_wave [current_wave_config]
@@ -579,10 +579,19 @@ if { [string length $curr_wave] == 0 } {
     }
 }
 run 1us
+# 回显仿真输出（$display 等），让 CLI 仿真能看到 log
+# xsim.log 位于 prj/xilinx/<name>.runs/sim_1/xsim/ 下
+set simLogs [glob -nocomplain {prj/xilinx/*.runs/sim_1/xsim/xsim.log}]
+if {$simLogs ne ""} {
+    set fp [open [lindex $simLogs 0] r]
+    puts "===== XSIM LOG ====="
+    puts [read $fp]
+    close $fp
+}
 file delete ${scriptPath} -force\n`;
 
         hdlFile.writeFile(scriptPath, script);
-        const cmd = `source ${scriptPath} -quiet`;
+        const cmd = `source ${scriptPath}`;
 
         HardwareOutput.report('simulateCli');
         context.process?.stdin.write(cmd + '\n');
