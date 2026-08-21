@@ -16,6 +16,7 @@ import {
     TimingInfo,
     PerformanceItem
 } from './types';
+import { GowinSynthAnalyzer } from './gowin';
 
 export interface SynthLogAnalyzer {
     readonly name: string;
@@ -512,6 +513,9 @@ export class XilinxSynthAnalyzer implements SynthLogAnalyzer {
 }
 
 function getAnalyzer(toolChain: ToolChainType): SynthLogAnalyzer {
+    if (toolChain === ToolChainType.Gowin) {
+        return new GowinSynthAnalyzer();
+    }
     return new XilinxSynthAnalyzer();
 }
 

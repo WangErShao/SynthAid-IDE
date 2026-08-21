@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import * as vscode from 'vscode';
-import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn, exec } from 'child_process';
 import * as fspath from 'path';
 import * as fs from 'fs';
 
@@ -333,8 +333,56 @@ class GowinOperation {
             "Gowin: Program",
             { title: 'ok', value: true }
         );
-        // Gowin Programmer 流程（Phase 2 完善）
-        vscode.window.showInformationMessage('Gowin Programmer 将在 Phase 2 实现');
+
+        // 查找位流文件 impl/pnr/<name>.fs
+        const pnrDir = hdlPath.join(this.prjInfo.path, this.prjInfo.name, 'impl', 'pnr');
+        const fsFiles = hdlFile.pickFileRecursive(pnrDir, filePath => filePath.endsWith('.fs'));
+        if (fsFiles.length === 0) {
+            vscode.window.showErrorMessage(`未找到位流文件 (.fs) in ${pnrDir}`);
+            return;
+        }
+        const fsFile = fsFiles[0];
+
+        // 从 device 提取 Gowin 器件短名（GW1N-LV9LQ144C6/I5 -> GW1N-9C）
+        const deviceShort = this.extractDeviceShortName(this.prjInfo.device);
+
+        // programmer_cli 路径
+        const gowinInstall = vscode.workspace.getConfiguration('digital-ide.prj.gowin.install').get<string>('path') || '';
+        const progCli = gowinInstall
+            ? hdlPath.join(fspath.dirname(gowinInstall), 'Programmer', 'bin', 'programmer_cli.exe')
+            : 'programmer_cli';
+
+        const cmd = `"${progCli}" --device ${deviceShort} --fsFile "${fsFile}"`;
+
+        HardwareOutput.show();
+        HardwareOutput.report(`Gowin: Programming ${fsFile}`, { level: ReportType.Run });
+        exec(cmd, (error, stdout, stderr) => {
+            if (error) {
+                HardwareOutput.report(`Gowin Programmer 失败: ${error.message}`, { level: ReportType.Error });
+                vscode.window.showErrorMessage(`Gowin Programmer 失败: ${stderr || error.message}`);
+                return;
+            }
+            HardwareOutput.report(`Gowin Programmer 成功: ${stdout}`, { level: ReportType.Info });
+            vscode.window.showInformationMessage('Gowin 烧录成功');
+        });
+    }
+
+    /**
+     * @description 从完整 part number 提取 Gowin 器件短名
+     * 例: "GW1N-LV9LQ144C6/I5" -> "GW1N-9C"（programmer_cli --device 需要）
+     */
+    private extractDeviceShortName(device: string): string {
+        // 匹配 GW<series>-<LV/UV><n><pkg> 中的系列号
+        const m = /(GW\d+[A-Z]?R?)-[A-Z]{1,3}\d*[A-Z]?/.exec(device);
+        if (m) {
+            // GW1N-LV9LQ144 -> GW1N-9 需要加后缀 C（9C）
+            const base = m[1]; // 如 GW1N
+            const numMatch = /-([A-Z]{1,3})(\d+)[A-Z]?/.exec(device);
+            if (numMatch) {
+                return `${base}-${numMatch[2]}`;
+            }
+        }
+        return device;
     }
 
     public async gui(context: PLContext) {
