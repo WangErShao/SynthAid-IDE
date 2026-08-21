@@ -246,6 +246,16 @@ class XilinxOperation {
                         context.onRunComplete?.(doneMatch[1] === 'impl' ? 'impl' : 'synth');
                     }
                     doneBuffer = doneBuffer.replace(/DIDE_RUN_DONE:(synth|impl)/g, '');
+
+                    // 检测 VCD 就绪哨兵，打开波形查看器
+                    const vcdReadyRe = /DIDE_VCD_READY:(.+)/;
+                    const vcdMatch = vcdReadyRe.exec(doneBuffer + text);
+                    if (vcdMatch) {
+                        const vcdPath = vcdMatch[1].trim();
+                        const vscodeUri = vscode.Uri.file(hdlPath.toSlash(vcdPath));
+                        vscode.commands.executeCommand('digital-ide.waveviewer.show', vscodeUri);
+                        doneBuffer = doneBuffer.replace(/DIDE_VCD_READY:.+/g, '');
+                    }
                 });
 
                 vivadoProcess.stderr.on('data', async data => {
@@ -563,30 +573,27 @@ file delete ${scriptPath} -force\n`;
 
         const scriptPath = hdlPath.join(this.xilinxPath, 'simulate.tcl');
         const script = `
+# CLI 仿真：batch 模式，自动跑 counter.tcl 的 run 后结束
 if {[current_sim] != ""} {
-    relaunch_sim
+    relaunch_sim -mode batch
 } else {
-    launch_simulation
+    launch_simulation -mode batch
 }
-
-set curr_wave [current_wave_config]
-if { [string length $curr_wave] == 0 } {
-    if { [llength [get_objects]] > 0} {
-        add_wave /
-        set_property needs_save false [current_wave_config]
-    } else {
-        send_msg_id Add_Wave-1 WARNING "No top level signals found. Simulator will start without a wave window. If you want to open a wave window go to 'File->New Waveform Configuration' or type 'create_wave_config' in the TCL console."
-    }
-}
-run 1us
 # 回显仿真输出（$display 等），让 CLI 仿真能看到 log
-# xsim.log 位于 prj/xilinx/<name>.runs/sim_1/xsim/ 下
-set simLogs [glob -nocomplain {prj/xilinx/*.runs/sim_1/xsim/xsim.log}]
+# xsim 运行目录: prj/xilinx/<name>.sim/sim_1/behav/xsim/
+set simLogs [glob -nocomplain {prj/xilinx/*.sim/sim_1/behav/xsim/simulate.log}]
 if {$simLogs ne ""} {
     set fp [open [lindex $simLogs 0] r]
     puts "===== XSIM LOG ====="
     puts [read $fp]
     close $fp
+} else {
+    puts "===== 未找到 simulate.log ====="
+}
+# 检测仿真生成的 VCD（$dumpfile 输出），供 SynthAid-IDE 波形查看器打开
+set vcdLogs [glob -nocomplain {prj/xilinx/*.sim/sim_1/behav/xsim/*.vcd}]
+if {$vcdLogs ne ""} {
+    puts "DIDE_VCD_READY:[lindex $vcdLogs 0]"
 }
 file delete ${scriptPath} -force\n`;
 

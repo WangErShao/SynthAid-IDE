@@ -14,8 +14,11 @@ src
 script
 resources/**/*.js
 !resources/dide-doc/view/js/**
+!resources/dide-viewer/view/vcd.js
+!resources/dide-viewer/view/js/**
 resources/**/*.d.ts
 resources/**/*.wasm
+!resources/dide-viewer/view/vcd.wasm
 resources/**/*.tar.gz
 tsconfig.json
 design
