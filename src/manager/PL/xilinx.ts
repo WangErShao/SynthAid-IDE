@@ -573,8 +573,19 @@ file delete ${scriptPath} -force\n`;
 
         // 2018.3 的 launch_simulation 无 -mode batch；用 -scripts_only 生成仿真脚本，
         // 再由 TS 手动执行 simulate.bat，让 xsim 真正批处理跑（输出 simulate.log + VCD）。
+        //
+        // 关键：确保 sim_1 顶层是 testbench（而非被测模块）。
+        // firstSimTopModule 默认空（需手动设 sim top），但 hdlParam.getSimTopModules()
+        // 能正确识别 sim 顶层。否则 -scripts_only 生成 counter 顶层，无 $dumpfile → 无 VCD。
+        const simTops = hdlParam.getSimTopModules();
+        const simTop = simTops.length > 0 ? simTops[0].name : this.topMod.sim;
+
         const scriptPath = hdlPath.join(this.xilinxPath, 'simulate.tcl');
         const script = `
+# 设置 sim_1 顶层为 testbench（否则默认被测模块，无 VCD）
+if {${simTop ? `"${simTop}"` : '""'} ne ""} {
+    set_property top "${simTop}" [get_filesets sim_1]
+}
 # 生成仿真脚本（不启动 GUI），由插件执行 simulate.bat 完成 CLI 仿真
 if {[current_sim] != ""} {
     relaunch_sim -scripts_only
@@ -589,46 +600,78 @@ file delete ${scriptPath} -force\n`;
         HardwareOutput.report('simulateCli');
         context.process?.stdin.write(cmd + '\n');
 
-        // 延时等待脚本生成，然后执行 simulate.bat
-        setTimeout(async () => {
-            try {
-                const xsimDir = hdlPath.join(this.prjInfo.path, this.prjInfo.name + '.sim', 'sim_1', 'behav', 'xsim');
-                const simBat = hdlPath.join(xsimDir, 'simulate.bat');
-                if (!hdlFile.isFile(simBat)) {
-                    vscode.window.showErrorMessage(`未找到仿真脚本 ${simBat}，请确认 Launch 后工程已打开`);
+        // 轮询等待 -scripts_only 生成 simulate.bat（脚本生成需数秒），再手动执行
+        const xsimDir = hdlPath.join(this.prjInfo.path, this.prjInfo.name + '.sim', 'sim_1', 'behav', 'xsim');
+        const simBat = hdlPath.join(xsimDir, 'simulate.bat');
+        const startTime = Date.now();
+        const waitTimer = setInterval(() => {
+            if (hdlFile.isFile(simBat)) {
+                clearInterval(waitTimer);
+                this.runXsimBatch(simBat, xsimDir);
+            } else if (Date.now() - startTime > 30000) {
+                clearInterval(waitTimer);
+                vscode.window.showErrorMessage(`等待仿真脚本生成超时：${simBat}`);
+            }
+        }, 1000);
+    }
+
+    /**
+     * @description 依次执行 xsim 三阶段批处理（compile → elaborate → simulate），
+     * 完成后回显 log + 打开 VCD。
+     *
+     * -scripts_only 生成 compile/elaborate/simulate 三个 bat，须按序执行：
+     *   compile（xvlog 编译）→ elaborate（xelab 建快照）→ simulate（xsim 跑）
+     * - xsim 需要 Vivado 环境，用 set PATH 加 vivado bin（settings64.bat 会改 cwd，不可靠）
+     */
+    private runXsimBatch(simBat: string, xsimDir: string) {
+        HardwareOutput.report('运行 xsim 批处理仿真（compile → elaborate → simulate）...');
+
+        const vivadoBin = vscode.workspace.getConfiguration('digital-ide.prj.vivado.install').get<string>('path') || '';
+        const pathPrefix = vivadoBin && hdlFile.isDir(vivadoBin) ? `set PATH=${vivadoBin};%PATH% && ` : '';
+        const bats = ['compile.bat', 'elaborate.bat', 'simulate.bat'];
+
+        const runBat = (idx: number) => {
+            if (idx >= bats.length) {
+                // 全部完成：回显 log + 打开 VCD
+                this.finishXsim(xsimDir);
+                return;
+            }
+            const bat = bats[idx];
+            exec(`${pathPrefix}"${hdlPath.join(xsimDir, bat)}"`, { cwd: xsimDir, timeout: 300000 }, (error, stdout, stderr) => {
+                if (error) {
+                    HardwareOutput.report(`xsim ${bat} 失败: ${stderr || error.message}`, { level: ReportType.Error });
                     return;
                 }
-                HardwareOutput.report('运行 xsim 批处理仿真...');
-                exec(`simulate.bat`, { cwd: xsimDir, timeout: 300000 }, (error, stdout, stderr) => {
-                    // 回显仿真 log
-                    const simLog = hdlPath.join(xsimDir, 'simulate.log');
-                    if (hdlFile.isFile(simLog)) {
-                        const logContent = hdlFile.readFile(simLog);
-                        if (logContent) {
-                            HardwareOutput.report('===== XSIM LOG =====\n' + logContent);
-                        } else {
-                            HardwareOutput.report('simulate.log 为空（testbench 无 $display 输出）');
-                        }
-                    } else {
-                        HardwareOutput.report(`未找到 ${simLog}`);
-                    }
-                    if (error) {
-                        HardwareOutput.report(`xsim 仿真错误: ${stderr || error.message}`, { level: ReportType.Error });
-                        return;
-                    }
-                    // 检测 VCD 并打开波形查看器
-                    const vcdFiles = hdlFile.pickFileRecursive(xsimDir, f => f.endsWith('.vcd'));
-                    if (vcdFiles.length > 0) {
-                        const vcdUri = vscode.Uri.file(hdlPath.toSlash(vcdFiles[0]));
-                        vscode.commands.executeCommand('digital-ide.waveviewer.show', vcdUri);
-                    } else {
-                        HardwareOutput.report('未生成 VCD（testbench 需含 $dumpfile/$dumpvars）');
-                    }
-                });
-            } catch (e) {
-                vscode.window.showErrorMessage(`CLI 仿真失败: ${e}`);
+                HardwareOutput.report(`[${bat}] 完成`);
+                runBat(idx + 1);
+            });
+        };
+        runBat(0);
+    }
+
+    /**
+     * @description xsim 三阶段完成后：回显 simulate.log + 打开 VCD 波形
+     */
+    private finishXsim(xsimDir: string) {
+        const simLog = hdlPath.join(xsimDir, 'simulate.log');
+        if (hdlFile.isFile(simLog)) {
+            const logContent = hdlFile.readFile(simLog);
+            if (logContent) {
+                HardwareOutput.report('===== XSIM LOG =====\n' + logContent);
+            } else {
+                HardwareOutput.report('simulate.log 为空（testbench 无 $display 输出）');
             }
-        }, 3000);
+        } else {
+            HardwareOutput.report(`未找到 ${simLog}`);
+        }
+        // 检测 VCD 并打开波形查看器
+        const vcdFiles = hdlFile.pickFileRecursive(xsimDir, f => f.endsWith('.vcd'));
+        if (vcdFiles.length > 0) {
+            const vcdUri = vscode.Uri.file(hdlPath.toSlash(vcdFiles[0]));
+            vscode.commands.executeCommand('digital-ide.waveviewer.show', vcdUri);
+        } else {
+            HardwareOutput.report('未生成 VCD（testbench 需含 $dumpfile/$dumpvars）');
+        }
     }
 
     public synth(context: PLContext) {

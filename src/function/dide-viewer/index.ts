@@ -18,7 +18,52 @@ function getWebviewContent(context: vscode.ExtensionContext, panel?: vscode.Webv
         const replaceHref = $1 + webviewUri?.toString() + '"';
         return replaceHref;
     });
-    return html;
+    if (!html || !panel) {
+        return html;
+    }
+    // 注入 CSP：允许 Emscripten（eval + wasm）与 webview 资源 fetch（vcd.js 需 fetch vcd.wasm）
+    const src = panel.webview.cspSource;
+    const csp = [
+        "default-src 'none'",
+        `style-src ${src}`,
+        `font-src ${src}`,
+        `script-src ${src} 'unsafe-eval' 'wasm-unsafe-eval'`,
+        `img-src ${src} data:`,
+        `connect-src ${src}`,
+        `worker-src ${src} blob:`,
+    ].join('; ');
+    const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`;
+    // 注入自动点击脚本：查看器默认只显示信号树，需点击信号才画波形；
+    // 打开 VCD 后自动点击信号树中的信号项，让波形立即显示。
+    const autoClick = `<script>
+(function () {
+    var clicked = false;
+    var timer = setInterval(function () {
+        var items = document.querySelectorAll('.vcd-signal-signal-item');
+        if (items.length > 0) {
+            if (!clicked) {
+                items.forEach(function (i) { i.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+                clicked = true;
+            }
+            clearInterval(timer);
+        }
+    }, 400);
+    setTimeout(function () { clearInterval(timer); }, 8000);
+})();
+</script>`;
+    // 插到 <head> 开头（若已有 CSP 则替换），自动点击脚本插到 </body> 前
+    let result = html;
+    if (/<head>/i.test(result)) {
+        result = result.replace(/<head>/i, `<head>${cspMeta}`);
+    } else {
+        result = cspMeta + result;
+    }
+    if (/<\/body>/i.test(result)) {
+        result = result.replace(/<\/body>/i, `${autoClick}</body>`);
+    } else {
+        result += autoClick;
+    }
+    return result;
 }
 
 class WaveViewer {
@@ -35,6 +80,7 @@ class WaveViewer {
 
     private create(uri: vscode.Uri) {
         this.openFileUri = uri;
+        const context = this.context;
         this.panel = vscode.window.createWebviewPanel(
             'Wave Viewer',
             'Wave Viewer',
@@ -42,7 +88,12 @@ class WaveViewer {
             {
                 enableScripts: true,
                 enableForms: true,
-                retainContextWhenHidden: true
+                retainContextWhenHidden: true,
+                // 允许 webview 访问波形查看器资源（vcd.js/vcd.wasm）+ 打开的 VCD 文件目录
+                localResourceRoots: [
+                    vscode.Uri.file(hdlPath.join(context.extensionPath, 'resources', 'dide-viewer', 'view')),
+                    vscode.Uri.file(fspath.dirname(uri.fsPath))
+                ]
             }
         );
 
@@ -51,7 +102,6 @@ class WaveViewer {
             this.panel = undefined;
         }, null, this.context.subscriptions);
 
-        const context = this.context;
         const previewHtml = getWebviewContent(context, this.panel);
         if (this.panel && previewHtml) {
             const launchFiles = getViewLaunchFiles(context, uri, this.panel);
@@ -106,10 +156,15 @@ class VcdViewerProvider implements vscode.CustomEditorProvider {
         this.context = context;
     }
 
-    async resolveCustomEditor(document: VcdViewerDocument, webviewPanel: vscode.WebviewPanel, token: vscode.CancellationToken) {        
+    async resolveCustomEditor(document: VcdViewerDocument, webviewPanel: vscode.WebviewPanel, token: vscode.CancellationToken) {
         webviewPanel.webview.options = {
             enableScripts: true,
             enableForms: true,
+            // 允许加载波形查看器资源 + 打开的 VCD 文件目录
+            localResourceRoots: [
+                vscode.Uri.file(hdlPath.join(this.context.extensionPath, 'resources', 'dide-viewer', 'view')),
+                vscode.Uri.file(fspath.dirname(document.uri.fsPath))
+            ]
         };
 
         webviewPanel.onDidDispose(() => {
