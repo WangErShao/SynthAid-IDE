@@ -50,7 +50,8 @@ const clkWiz: IpSchema = {
             options: ['MMCM', 'PLL']
         },
         {
-            name: 'REF_CLK_FREQ',
+            // PRIM_IN_FREQ 才是驱动 clk_in1 实际频率的参数（REF_CLK_FREQ 只是 GUI 参考值，不生效）
+            name: 'PRIM_IN_FREQ',
             label: '输入时钟频率 (MHz)',
             type: 'number',
             default: '100.0',
