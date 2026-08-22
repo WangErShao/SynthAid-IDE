@@ -9,7 +9,7 @@ import { BSON } from 'bson';
 import { getIconConfig } from '../../hdlFs/icons';
 import { t } from '../../i18n';
 
-function getWebviewContent(context: vscode.ExtensionContext, panel?: vscode.WebviewPanel): string | undefined {
+function getWebviewContent(context: vscode.ExtensionContext, panel?: vscode.WebviewPanel, vcdBase64?: string): string | undefined {
     const dideviewerPath = hdlPath.join(context.extensionPath, 'resources', 'dide-viewer', 'view');
     const htmlIndexPath = hdlPath.join(dideviewerPath, 'index.html');
     const html = hdlFile.readFile(htmlIndexPath)?.replace(/(<link.+?href="|<script.+?src="|<img.+?src=")(.+?)"/g, (m, $1, $2) => {
@@ -21,34 +21,54 @@ function getWebviewContent(context: vscode.ExtensionContext, panel?: vscode.Webv
     if (!html || !panel) {
         return html;
     }
-    // 注入 CSP：允许 Emscripten（eval + wasm）与 webview 资源 fetch（vcd.js 需 fetch vcd.wasm）
+    // 注入 CSP：允许 Emscripten（eval + wasm）、内联脚本（自动点击）与 webview 资源 fetch
     const src = panel.webview.cspSource;
     const csp = [
         "default-src 'none'",
         `style-src ${src}`,
         `font-src ${src}`,
-        `script-src ${src} 'unsafe-eval' 'wasm-unsafe-eval'`,
+        `script-src ${src} 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'`,
         `img-src ${src} data:`,
         `connect-src ${src}`,
         `worker-src ${src} blob:`,
     ].join('; ');
     const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`;
-    // 注入自动点击脚本：查看器默认只显示信号树，需点击信号才画波形；
-    // 打开 VCD 后自动点击信号树中的信号项，让波形立即显示。
+    // 注入 VCD 数据：扩展侧读取 VCD 内容注入 webview 内存，覆盖 readVcdFile
+    // （绕开 webview 对工程目录文件的 fetch 限制，确保数据一定能读到）
+    const vcdInject = vcdBase64 ? `<script>
+window.__vcdData = "${vcdBase64}";
+window.readVcdFile = async function () {
+    var bin = atob(window.__vcdData);
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) { arr[i] = bin.charCodeAt(i); }
+    return arr;
+};
+</script>` : '';
+    // 注入自动点击脚本（内联，配合 'unsafe-inline'）：
+    // 查看器默认只显示信号树，需点击信号才画波形；打开 VCD 后自动点击信号项。
+    // 带诊断：把信号项数量写入 document.title，便于定位问题（数据未到 vs 未点击）。
     const autoClick = `<script>
 (function () {
     var clicked = false;
+    var totalClicks = 0;
     var timer = setInterval(function () {
         var items = document.querySelectorAll('.vcd-signal-signal-item');
         if (items.length > 0) {
             if (!clicked) {
                 items.forEach(function (i) { i.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
+                totalClicks = items.length;
                 clicked = true;
+                document.title = 'CLICKED:' + totalClicks + ' signals';
             }
             clearInterval(timer);
+        } else {
+            document.title = 'NO_SIGNALS:' + document.querySelectorAll('.vcd-signal-signal-item,.vcd-signal-title').length;
         }
     }, 400);
-    setTimeout(function () { clearInterval(timer); }, 8000);
+    setTimeout(function () {
+        clearInterval(timer);
+        if (!clicked) { document.title = 'NO_SIGNALS_TIMEOUT'; }
+    }, 8000);
 })();
 </script>`;
     // 插到 <head> 开头（若已有 CSP 则替换），自动点击脚本插到 </body> 前
@@ -59,9 +79,9 @@ function getWebviewContent(context: vscode.ExtensionContext, panel?: vscode.Webv
         result = cspMeta + result;
     }
     if (/<\/body>/i.test(result)) {
-        result = result.replace(/<\/body>/i, `${autoClick}</body>`);
+        result = result.replace(/<\/body>/i, `${vcdInject}${autoClick}</body>`);
     } else {
-        result += autoClick;
+        result += vcdInject + autoClick;
     }
     return result;
 }
@@ -102,7 +122,16 @@ class WaveViewer {
             this.panel = undefined;
         }, null, this.context.subscriptions);
 
-        const previewHtml = getWebviewContent(context, this.panel);
+        // 读取 VCD 文件内容（base64），注入 webview 内存，绕开 fetch 限制
+        let vcdBase64: string | undefined;
+        if (uri.fsPath.endsWith('.vcd')) {
+            const raw = hdlFile.readFile(uri.fsPath);
+            if (raw) {
+                vcdBase64 = Buffer.from(raw, 'utf-8').toString('base64');
+            }
+        }
+
+        const previewHtml = getWebviewContent(context, this.panel, vcdBase64);
         if (this.panel && previewHtml) {
             const launchFiles = getViewLaunchFiles(context, uri, this.panel);
             if (launchFiles instanceof Error) {
@@ -110,13 +139,13 @@ class WaveViewer {
                 return;
             }
 
-            const { vcd, view, wasm, vcdjs, worker, root } = launchFiles;
+            const { vcd, view } = launchFiles;
+            // 只替换数据/文件路径（test.vcd = readVcdFile 的 fetch 目标，test.view = 视图文件）。
+            // 不要 replace 'vcd.js'/'vcd.wasm' —— getWebviewContent 已把它们转成 webviewUri，
+            // 再 replace 会把 webviewUri 里的 'vcd.js' 再次替换成新 URI，导致双重嵌套、资源 404。
             let preprocessHtml = previewHtml
                 .replace('test.vcd', vcd)
-                .replace('test.view', view)
-                .replace('vcd.js', vcdjs)
-                .replace('vcd.wasm', wasm)
-                .replace('worker.js', worker);
+                .replace('test.view', view);
             this.panel.webview.html = preprocessHtml;
             this.panel.iconPath = getIconConfig('view');
             registerMessageEvent(this.panel, uri);
@@ -182,13 +211,13 @@ class VcdViewerProvider implements vscode.CustomEditorProvider {
                 return;
             }
 
-            const { vcd, view, wasm, vcdjs, worker, root } = launchFiles;
+            const { vcd, view } = launchFiles;
+            // 只替换数据/文件路径（test.vcd = readVcdFile 的 fetch 目标，test.view = 视图文件）。
+            // 不要 replace 'vcd.js'/'vcd.wasm' —— getWebviewContent 已把它们转成 webviewUri，
+            // 再 replace 会把 webviewUri 里的 'vcd.js' 再次替换成新 URI，导致双重嵌套、资源 404。
             let preprocessHtml = previewHtml
                 .replace('test.vcd', vcd)
-                .replace('test.view', view)
-                .replace('vcd.js', vcdjs)
-                .replace('vcd.wasm', wasm)
-                .replace('worker.js', worker);            
+                .replace('test.view', view);            
 
             webviewPanel.webview.html = preprocessHtml;
             webviewPanel.iconPath = getIconConfig('view');
