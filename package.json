@@ -4,7 +4,7 @@
     "description": "all in one vscode plugin for Verilog/VHDL development",
     "publisher": "SynthAid",
     "homepage": "https://github.com/WangErShao/SynthAid-IDE",
-    "version": "0.1.1",
+    "version": "0.1.2",
     "main": "./out/extension",
     "l10n": "./l10n",
     "icon": "images/icon.png",
