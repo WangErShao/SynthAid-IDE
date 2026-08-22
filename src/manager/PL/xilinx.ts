@@ -571,26 +571,29 @@ file delete ${scriptPath} -force\n`;
             { title: 'ok', value: true }
         );
 
-        // 2018.3 的 launch_simulation 无 -mode batch；用 -scripts_only 生成仿真脚本，
-        // 再由 TS 手动执行 simulate.bat，让 xsim 真正批处理跑（输出 simulate.log + VCD）。
-        //
         // 关键：确保 sim_1 顶层是 testbench（而非被测模块）。
         // firstSimTopModule 默认空（需手动设 sim top），但 hdlParam.getSimTopModules()
-        // 能正确识别 sim 顶层。否则 -scripts_only 生成 counter 顶层，无 $dumpfile → 无 VCD。
+        // 能正确识别 sim 顶层。否则生成 counter 顶层，无 $dumpfile → 无 VCD。
         const simTops = hdlParam.getSimTopModules();
         const simTop = simTops.length > 0 ? simTops[0].name : this.topMod.sim;
 
         const scriptPath = hdlPath.join(this.xilinxPath, 'simulate.tcl');
+        // TS 端判断 Vivado 版本，生成对应 Tcl（避免 Tcl 内 [version] 字符串比较的坑）
+        const vivadoVersion = this.getVivadoVersion();
+        const isModern = vivadoVersion >= 2019;
+        const launchMode = isModern ? '-mode batch' : '-scripts_only';
         const script = `
 # 设置 sim_1 顶层为 testbench（否则默认被测模块，无 VCD）
 if {${simTop ? `"${simTop}"` : '""'} ne ""} {
     set_property top "${simTop}" [get_filesets sim_1]
 }
-# 生成仿真脚本（不启动 GUI），由插件执行 simulate.bat 完成 CLI 仿真
+# CLI 仿真（Vivado ${vivadoVersion > 0 ? vivadoVersion : '未知'}）:
+# - 2019+ 支持 -mode batch，Vivado 自动跑完仿真
+# - 2018.3 无 -mode batch（GUI 挂起），用 -scripts_only 生成脚本后由插件手动执行
 if {[current_sim] != ""} {
-    relaunch_sim -scripts_only
+    relaunch_sim ${launchMode}
 } else {
-    launch_simulation -scripts_only
+    launch_simulation ${launchMode}
 }
 file delete ${scriptPath} -force\n`;
 
@@ -600,7 +603,29 @@ file delete ${scriptPath} -force\n`;
         HardwareOutput.report('simulateCli');
         context.process?.stdin.write(cmd + '\n');
 
-        // 轮询等待 -scripts_only 生成 simulate.bat（脚本生成需数秒），再手动执行
+        // 2018.3 回退路径：轮询等待 -scripts_only 生成 simulate.bat，再手动执行三阶段
+        if (!isModern) {
+            this.waitAndRunXsimScripts();
+        }
+    }
+
+    /**
+     * @description 从 Vivado 安装路径解析主版本号（如 "C:/Xilinx/Vivado/2018.3/bin" → 2018）
+     * 未配置或解析失败返回 0（按旧版处理，走 -scripts_only 回退）
+     */
+    private getVivadoVersion(): number {
+        const vivadoBin = vscode.workspace.getConfiguration('digital-ide.prj.vivado.install').get<string>('path') || '';
+        const m = /Vivado\/(\d{4})\.(\d+)/.exec(vivadoBin.replace(/\\/g, '/'));
+        if (m) {
+            return parseInt(m[1], 10);
+        }
+        return 0;
+    }
+
+    /**
+     * @description 2018.3 回退：轮询等待 -scripts_only 生成的 simulate.bat，然后手动跑三阶段
+     */
+    private waitAndRunXsimScripts() {
         const xsimDir = hdlPath.join(this.prjInfo.path, this.prjInfo.name + '.sim', 'sim_1', 'behav', 'xsim');
         const simBat = hdlPath.join(xsimDir, 'simulate.bat');
         const startTime = Date.now();
