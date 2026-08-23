@@ -75,8 +75,41 @@ class PlManage extends BaseManage {
         };
     }
 
+    /**
+     * @description 检测 toolChain 是否变化（如从 Xilinx 工程切到 Gowin 工程）。
+     * PlManage 是单例（插件激活时创建一次），ope 按首次 toolChain 创建；
+     * 切换工程后 toolChain 变了但 ope 仍是旧的，会启动错误工具链（如 Gowin 工程启动 Vivado）。
+     * 此方法检测到变化时重建 ope 并清理旧工具链进程。
+     */
+    private ensureToolchain() {
+        const current = opeParam.prjInfo.toolChain;
+        if (this.context.tool === current) {
+            return;
+        }
+        // 清理旧工具链进程（如 Vivado），避免残留
+        if (this.context.process !== undefined) {
+            try {
+                this.context.ope.exit?.(this.context);
+            } catch { /* ignore */ }
+            this.context.process = undefined;
+        }
+        // 按新 toolChain 重建操作类
+        this.context.ope = current === ToolChainType.Gowin
+            ? new GowinOperation()
+            : new XilinxOperation();
+        this.context.tool = current;
+        if (current === ToolChainType.Xilinx) {
+            this.context.path = (this.context.ope as XilinxOperation).updateVivadoPath();
+        } else if (current === ToolChainType.Gowin) {
+            this.context.path = (this.context.ope as GowinOperation).updateGowinPath();
+        }
+        HardwareOutput.report(`工具链切换为 ${current}`, { level: ReportType.Info });
+    }
+
     public launch() {
-        // 状态保护：Vivado 已在运行时不重复启动，防止 spawn 多个进程
+        // toolChain 变化时重建操作类（Xilinx ↔ Gowin）
+        this.ensureToolchain();
+        // 状态保护：工具链进程已在运行时不重复启动
         if (this.context.process !== undefined) {
             vscode.window.showWarningMessage(t('warn.pl.already-launched'));
             return;
