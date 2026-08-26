@@ -4,7 +4,7 @@
     "description": "all in one vscode plugin for Verilog/VHDL development",
     "publisher": "SynthAid",
     "homepage": "https://github.com/WangErShao/SynthAid-IDE",
-    "version": "0.1.2",
+    "version": "0.1.2-1",
     "main": "./out/extension",
     "l10n": "./l10n",
     "icon": "images/icon.png",
@@ -186,6 +186,24 @@
                     "type": "boolean",
                     "default": false,
                     "description": "%digital-ide.function.simulate.runInTerminal.title%"
+                },
+                "digital-ide.waveviewer.program": {
+                    "type": "string",
+                    "enum": [
+                        "builtin",
+                        "surfer"
+                    ],
+                    "enumDescriptions": [
+                        "Use the built-in Digital-IDE wave viewer (MIT)",
+                        "Use the external Surfer program (surfer-project.org, EUPL-1.2). Applies to the auto-open after simulation and the `digital-ide.waveviewer.show` command; double-clicking a .vcd/.view file still uses the built-in custom editor."
+                    ],
+                    "default": "builtin",
+                    "description": "%digital-ide.waveviewer.program.title%"
+                },
+                "digital-ide.waveviewer.surferPath": {
+                    "type": "string",
+                    "default": "surfer",
+                    "description": "%digital-ide.waveviewer.surferPath.title%"
                 },
                 "digital-ide.function.lsp.formatter.vlog.default.style": {
                     "type": "string",

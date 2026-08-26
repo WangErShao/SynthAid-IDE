@@ -99,6 +99,7 @@ export class PpyAction extends BaseAction {
 
             switch (opeParam.prjInfo.toolChain) {
                 case ToolChainType.Xilinx:
+                case ToolChainType.Gowin:
                     await prjManage.pl?.updateByMonitor(addFiles, delFiles);
                     break;
             

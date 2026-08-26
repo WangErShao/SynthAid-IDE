@@ -6,9 +6,14 @@
 		"toolChain": {
 			"type": "string",
 			"description": "The tool chain you need",
+			"markdownDescription": "选择使用的 FPGA 工具链：`xilinx` 用 Vivado，`gowin` 用高云 Gowin EDA。\n\n示例：\n```json\n{\"toolChain\": \"gowin\"}\n```",
 			"enum": [
 				"xilinx",
 				"gowin"
+			],
+			"markdownEnumDescriptions": [
+				"**Xilinx Vivado**：使用 Vivado 完成综合、实现、位流生成与烧录。\n\n示例：\n```json\n{\"toolChain\": \"xilinx\"}\n```",
+				"**Gowin 高云**：使用 Gowin EDA（gw_sh）完成综合、实现、位流生成与烧录。\n\n示例：\n```json\n{\"toolChain\": \"gowin\"}\n```"
 			]
 		},
 		"prjName": {
@@ -16,47 +21,59 @@
 			"default": {
 				"PL": "template"
 			},
+			"markdownDescription": "工程名称：`PL` 为 FPGA 硬件工程名，`PS` 为 SOC 软件工程名。\n\n示例：\n```json\n{\"prjName\": {\"PL\": \"led\", \"PS\": \"test\"}}\n```",
 			"properties": {
 				"PL": {
 					"type": "string",
 					"description": "project name of FPGA",
+					"markdownDescription": "**PL（FPGA 硬件工程）名称**：可自由命名，建议小写字母与下划线。\n\n示例：`led`、`counter`、`fifo_ex`",
 					"default": "template"
 				},
 				"PS": {
 					"type": "string",
 					"description": "project name of SOC",
+					"markdownDescription": "**PS（SOC 软件工程）名称**：可自由命名。\n\n示例：`app`、`sdk_test`",
 					"default": "test"
 				}
 			}
 		},
 		"arch": {
 			"type": "object",
+			"markdownDescription": "工程目录结构。路径支持 `${workspace}`、`${plname}` 等占位符；留空则使用默认标准结构。\n\n示例：\n```json\n{\"arch\": {\"prjPath\": \"${workspace}/prj\", \"hardware\": {\"src\": \"${workspace}/user/src\", \"sim\": \"${workspace}/user/sim\", \"data\": \"${workspace}/user/data\"}}}\n```",
 			"properties": {
 				"prjPath": {
-					"type": "string"
+					"type": "string",
+					"markdownDescription": "工程根目录（存放工具链生成的工程文件）。\n\n示例：\n```json\n\"prjPath\": \"${workspace}/prj\"\n```"
 				},
 				"hardware": {
 					"type": "object",
+					"markdownDescription": "硬件（FPGA）相关目录。\n\n示例：\n```json\n{\"hardware\": {\"src\": \"${workspace}/user/src\", \"sim\": \"${workspace}/user/sim\", \"data\": \"${workspace}/user/data\"}}\n```",
 					"properties": {
 						"src": {
-							"type": "string"
+							"type": "string",
+							"markdownDescription": "HDL 设计源文件目录（Verilog/VHDL/SV）。\n\n示例：\n```json\n\"src\": \"${workspace}/user/src\"\n```"
 						},
 						"sim": {
-							"type": "string"
+							"type": "string",
+							"markdownDescription": "仿真测试文件目录（testbench）。\n\n示例：\n```json\n\"sim\": \"${workspace}/user/sim\"\n```"
 						},
 						"data": {
-							"type": "string"
+							"type": "string",
+							"markdownDescription": "约束文件（.sdc/.cst 等）与数据文件目录。\n\n示例：\n```json\n\"data\": \"${workspace}/user/data\"\n```"
 						}
 					}
 				},
 				"software": {
 					"type": "object",
+					"markdownDescription": "软件（SOC）相关目录。\n\n示例：\n```json\n{\"software\": {\"src\": \"${workspace}/user/sdk\", \"data\": \"${workspace}/user/sdk/data\"}}\n```",
 					"properties": {
 						"src": {
-							"type": "string"
+							"type": "string",
+							"markdownDescription": "SOC 软件源码目录。\n\n示例：\n```json\n\"src\": \"${workspace}/user/sdk\"\n```"
 						},
 						"data": {
-							"type": "string"
+							"type": "string",
+							"markdownDescription": "SOC 软件数据/资源目录。\n\n示例：\n```json\n\"data\": \"${workspace}/user/sdk/data\"\n```"
 						}
 					}
 				}
@@ -64,74 +81,110 @@
 		},
 		"library": {
 			"type": "object",
+			"markdownDescription": "通用库配置：`state` 选择本地/远程库，`hardware.common/custom` 指定通用与自定义库路径。\n\n示例：\n```json\n{\"library\": {\"state\": \"remote\"}}\n```",
 			"properties": {
-				"state": {
-					"type": "string",
-					"enum": [
-						"local",
-						"remote"
-					]
-				},
+			"state": {
+				"type": "string",
+				"markdownDescription": "库来源：`local` 使用工程内 `user/src/lib`，`remote` 使用扩展内置公共库。\n\n示例：\n```json\n{\"library\": {\"state\": \"remote\"}}\n```",
+				"enum": [
+					"local",
+					"remote"
+				],
+				"markdownEnumDescriptions": [
+					"**本地库**：使用工程内 `user/src/lib` 下的通用模块。\n\n示例：\n```json\n{\"library\": {\"state\": \"local\"}}\n```",
+					"**远程库**：使用扩展内置的公共库（`library/` 目录）。\n\n示例：\n```json\n{\"library\": {\"state\": \"remote\"}}\n```"
+				]
+			},
 				"hardware": {
 					"type": "object",
+					"markdownDescription": "库硬件文件路径配置。\n\n示例：\n```json\n{\"hardware\": {\"common\": [], \"custom\": []}}\n```",
 					"properties": {
 						"common": {
-							"type": "array"
+							"type": "array",
+							"markdownDescription": "通用库路径列表（相对公共库目录）。\n\n示例：\n```json\n\"common\": [\"uart\", \"fifo\"]\n```"
 						},
 						"custom": {
-							"type": "array"
+							"type": "array",
+							"markdownDescription": "自定义库路径列表。\n\n示例：\n```json\n\"custom\": [\"${workspace}/lib/mylib\"]\n```"
 						}
 					}
 				}
 			}
 		},
 		"IP_REPO": {
-			"type": "array"
+			"type": "array",
+			"markdownDescription": "Xilinx IP 仓库列表（选择扩展内置的 IP 类型，如 `arm`、`aid`）。\n\n示例：\n```json\n{\"IP_REPO\": []}\n```"
 		},
 		"soc": {
 			"type": "object",
 			"default": {
 				"core": "none"
 			},
+			"markdownDescription": "片上系统（SOC）配置：`core` 选择 CPU 核，`bd` 选择 Block Design 模板，`os`/`app` 选择操作系统与应用模板。纯 FPGA 工程设 `\"core\": \"none\"`。\n\n示例：\n```json\n{\"soc\": {\"core\": \"none\"}}\n```",
 			"properties": {
-				"core": {
-					"type": "string",
-					"description": "Supported CPU for SOC",
-					"enum": [
-						"none",
-						"cortexM3",
-						"microblaze",
-						"ps7_cortexa9_0",
-						"ps7_cortexa9_1",
-						"psu_cortexr5",
-						"psu_cortexa53"
-					]
-				},
-				"bd": {
-					"type": "string",
-					"description": "The bd_file for FPGA Designed",
-					"enum": [
-						"zynq_default",
-						"m3_xIP_default",
-						"MicroBlaze_default",
-						"PCIe_Test"
-					]
-				},
-				"os": {
-					"type": "string",
-					"default": "standalone",
-					"description": "the os for SOC application",
-					"enum": [
-						"linux",
-						"xilkernel",
-						"standalone",
-						"freertos10_xilinx"
-					]
-				},
+			"core": {
+				"type": "string",
+				"description": "Supported CPU for SOC",
+				"markdownDescription": "选择 CPU：软核（Cortex-M3 / MicroBlaze）或 Zynq PS 硬核。纯 PL 工程选 `none`。\n\n示例：\n```json\n{\"soc\": {\"core\": \"none\"}}\n```",
+				"enum": [
+					"none",
+					"cortexM3",
+					"microblaze",
+					"ps7_cortexa9_0",
+					"ps7_cortexa9_1",
+					"psu_cortexr5",
+					"psu_cortexa53"
+				],
+				"markdownEnumDescriptions": [
+					"**不使用 CPU**：纯 PL（FPGA 逻辑）工程，最常见。\n\n示例：\n```json\n{\"soc\": {\"core\": \"none\"}}\n```",
+					"**Cortex-M3 软核**：Gowin/通用 MCU 软核方案。\n\n示例：\n```json\n{\"soc\": {\"core\": \"cortexM3\"}}\n```",
+					"**MicroBlaze 软核**：Xilinx 软核处理器。\n\n示例：\n```json\n{\"soc\": {\"core\": \"microblaze\"}}\n```",
+					"**Zynq-7000 PS 核 0**：Cortex-A9 处理器（PS 端）。\n\n示例：\n```json\n{\"soc\": {\"core\": \"ps7_cortexa9_0\"}}\n```",
+					"**Zynq-7000 PS 核 1**：Cortex-A9 处理器（PS 端）。\n\n示例：\n```json\n{\"soc\": {\"core\": \"ps7_cortexa9_1\"}}\n```",
+					"**Zynq UltraScale+ PS**：Cortex-R5 实时核。\n\n示例：\n```json\n{\"soc\": {\"core\": \"psu_cortexr5\"}}\n```",
+					"**Zynq UltraScale+ PS**：Cortex-A53 应用核。\n\n示例：\n```json\n{\"soc\": {\"core\": \"psu_cortexa53\"}}\n```"
+				]
+			},
+			"bd": {
+				"type": "string",
+				"description": "The bd_file for FPGA Designed",
+				"markdownDescription": "选择 Block Design 模板（需配合 `core` 使用）。\n\n示例：\n```json\n{\"soc\": {\"bd\": \"zynq_default\"}}\n```",
+				"enum": [
+					"zynq_default",
+					"m3_xIP_default",
+					"MicroBlaze_default",
+					"PCIe_Test"
+				],
+				"markdownEnumDescriptions": [
+					"**Zynq 默认 BD**：基于 Zynq-7000 的 Block Design 模板。\n\n示例：\n```json\n{\"soc\": {\"bd\": \"zynq_default\"}}\n```",
+					"**Cortex-M3 模板**：M3 软核 + Xilinx IP 的 Block Design 模板。\n\n示例：\n```json\n{\"soc\": {\"bd\": \"m3_xIP_default\"}}\n```",
+					"**MicroBlaze 模板**：MicroBlaze 软核的 Block Design 模板。\n\n示例：\n```json\n{\"soc\": {\"bd\": \"MicroBlaze_default\"}}\n```",
+					"**PCIe 测试模板**：PCIe 验证用 Block Design 模板。\n\n示例：\n```json\n{\"soc\": {\"bd\": \"PCIe_Test\"}}\n```"
+				]
+			},
+			"os": {
+				"type": "string",
+				"default": "standalone",
+				"description": "the os for SOC application",
+				"markdownDescription": "选择操作系统：`standalone` 裸机最简单，`linux`/`freertos10_xilinx` 为嵌入式系统。\n\n示例：\n```json\n{\"soc\": {\"os\": \"standalone\"}}\n```",
+				"enum": [
+					"linux",
+					"xilkernel",
+					"standalone",
+					"freertos10_xilinx"
+				],
+				"markdownEnumDescriptions": [
+					"**Linux**：嵌入式 Linux 操作系统。\n\n示例：\n```json\n{\"soc\": {\"os\": \"linux\"}}\n```",
+					"**Xilkernel**：Xilinx 轻量级实时内核。\n\n示例：\n```json\n{\"soc\": {\"os\": \"xilkernel\"}}\n```",
+					"**Standalone**：裸机（无操作系统），最简单。\n\n示例：\n```json\n{\"soc\": {\"os\": \"standalone\"}}\n```",
+					"**FreeRTOS**：Xilinx 提供的 FreeRTOS 10 移植。\n\n示例：\n```json\n{\"soc\": {\"os\": \"freertos10_xilinx\"}}\n```"
+				]
+			},
 				"app": {
 					"type": "string",
 					"default": "Hello World",
 					"description": "the app for SOC application",
+					"markdownDescription": "选择应用模板：裸机示例、网络/内存测试、引导程序或 Linux 应用等。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Hello World\"}}\n```",
 					"enum": [
 						"Hello World",
 						"Empty Application",
@@ -165,6 +218,40 @@
 						"FreeRTOS lwIP UDP Perf Server",
 						"Linux Empty Application",
 						"Linux Hello World"
+					],
+					"markdownEnumDescriptions": [
+						"**Hello World**：最简应用模板，打印 Hello World。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Hello World\"}}\n```",
+						"**Empty Application**：空应用模板，从零开始。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Empty Application\"}}\n```",
+						"**Zynq FSBL**：Zynq-7000 第一阶段引导加载程序。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Zynq FSBL\"}}\n```",
+						"**Zynq MP FSBL**：Zynq UltraScale+ 多核引导加载程序。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Zynq MP FSBL\"}}\n```",
+						"**SREC SPI Bootloader**：SPI Flash 的 SREC 引导加载程序。\n\n示例：\n```json\n{\"soc\": {\"app\": \"SREC SPI Bootloader\"}}\n```",
+						"**SREC Bootloader**：SREC 格式引导加载程序。\n\n示例：\n```json\n{\"soc\": {\"app\": \"SREC Bootloader\"}}\n```",
+						"**Zynq DRAM tests**：Zynq-7000 DDR 内存测试。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Zynq DRAM tests\"}}\n```",
+						"**Zynq MP DRAM tests**：Zynq UltraScale+ DDR 内存测试。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Zynq MP DRAM tests\"}}\n```",
+						"**ZynqMP PMU Firmware**：Zynq UltraScale+ PMU 固件。\n\n示例：\n```json\n{\"soc\": {\"app\": \"ZynqMP PMU Firmware\"}}\n```",
+						"**RSA Authentication App**：RSA 安全认证示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"RSA Authentication App\"}}\n```",
+						"**Libmetal AMP Demo**：Libmetal 非对称多核（AMP）示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Libmetal AMP Demo\"}}\n```",
+						"**lwIP Echo Server**：lwIP 网络回显服务器。\n\n示例：\n```json\n{\"soc\": {\"app\": \"lwIP Echo Server\"}}\n```",
+						"**lwIP TCP Perf Client**：lwIP TCP 性能测试客户端。\n\n示例：\n```json\n{\"soc\": {\"app\": \"lwIP TCP Perf Client\"}}\n```",
+						"**lwIP TCP Perf Server**：lwIP TCP 性能测试服务器。\n\n示例：\n```json\n{\"soc\": {\"app\": \"lwIP TCP Perf Server\"}}\n```",
+						"**lwIP UDP Perf Client**：lwIP UDP 性能测试客户端。\n\n示例：\n```json\n{\"soc\": {\"app\": \"lwIP UDP Perf Client\"}}\n```",
+						"**lwIP UDP Perf Server**：lwIP UDP 性能测试服务器。\n\n示例：\n```json\n{\"soc\": {\"app\": \"lwIP UDP Perf Server\"}}\n```",
+						"**Memory Tests**：通用内存测试。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Memory Tests\"}}\n```",
+						"**OpenAMP echo-test**：OpenAMP 回显测试。\n\n示例：\n```json\n{\"soc\": {\"app\": \"OpenAMP echo-test\"}}\n```",
+						"**OpenAMP 矩阵乘法**：OpenAMP 矩阵乘法示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"OpenAMP matrix multiplication Demo\"}}\n```",
+						"**OpenAMP RPC Demo**：OpenAMP 远程过程调用示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"OpenAMP RPC Demo\"}}\n```",
+						"**Peripheral Tests**：外设测试示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Peripheral Tests\"}}\n```",
+						"**DDR self refresh**：DDR 自刷新测试。\n\n示例：\n```json\n{\"soc\": {\"app\": \"DDR self refresh\"}}\n```",
+						"**Dhrystone**：CPU 性能基准测试。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Dhrystone\"}}\n```",
+						"**Xilkernel POSIX Threads**：Xilkernel POSIX 线程示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Xilkernel POSIX Threads Demo\"}}\n```",
+						"**FreeRTOS Hello World**：FreeRTOS 最简示例。\n\n示例：\n```json\n{\"soc\": {\"app\": \"FreeRTOS Hello World\"}}\n```",
+						"**FreeRTOS lwIP Echo**：FreeRTOS + lwIP 网络回显。\n\n示例：\n```json\n{\"soc\": {\"app\": \"FreeRTOS lwIP Echo Server\"}}\n```",
+						"**FreeRTOS lwIP TCP 客户端**：FreeRTOS + lwIP TCP 性能客户端。\n\n示例：\n```json\n{\"soc\": {\"app\": \"FreeRTOS lwIP TCP Perf Client\"}}\n```",
+						"**FreeRTOS lwIP TCP 服务器**：FreeRTOS + lwIP TCP 性能服务器。\n\n示例：\n```json\n{\"soc\": {\"app\": \"FreeRTOS lwIP TCP Perf Server\"}}\n```",
+						"**FreeRTOS lwIP UDP 客户端**：FreeRTOS + lwIP UDP 性能客户端。\n\n示例：\n```json\n{\"soc\": {\"app\": \"FreeRTOS lwIP UDP Perf Client\"}}\n```",
+						"**FreeRTOS lwIP UDP 服务器**：FreeRTOS + lwIP UDP 性能服务器。\n\n示例：\n```json\n{\"soc\": {\"app\": \"FreeRTOS lwIP UDP Perf Server\"}}\n```",
+						"**Linux Empty Application**：Linux 空应用模板。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Linux Empty Application\"}}\n```",
+						"**Linux Hello World**：Linux 下 Hello World 应用。\n\n示例：\n```json\n{\"soc\": {\"app\": \"Linux Hello World\"}}\n```"
 					]
 				}
 			},
@@ -183,6 +270,7 @@
 		"enableShowLog": {
 			"type": "boolean",
 			"description": "Whether to display logs during compilation",
+			"markdownDescription": "编译时是否显示详细日志（影响 Vivado 的 `-quiet` 参数）。\n\n示例：\n```json\n{\"enableShowLog\": true}\n```",
 			"default": false,
 			"enum": [
 				true,
@@ -192,6 +280,7 @@
 		"device": {
 			"type": "string",
 			"description": "The device type",
+			"markdownDescription": "FPGA 器件型号，需与工具链匹配：Xilinx 选 `xc7*`/`xq7*`，Gowin 选 `GW1N*`/`GW1NSR*`。\n\n示例：\n```json\n{\"device\": \"GW1N-LV9LQ144C6/I5\"}\n```",
 			"enum": [
 				"none",
 				"xc7z020clg400-2",
@@ -208,6 +297,23 @@
 				"GW1N-UV9EQ144C6/I5",
 				"GW1NR-LV9QN88PC6/I5",
 				"GW1NSR-LV4CQN48PC6/I5"
+			],
+			"markdownEnumDescriptions": [
+				"未指定器件",
+				"**Zynq-7000**：XC7Z020，CLG400 封装，速度等级 -2（Xilinx）",
+				"**Artix-7**：XC7A35T，FTG256 封装，速度等级 -1（Xilinx）",
+				"**Artix-7**：XC7A35T，CSG324 封装，速度等级 -1（Xilinx）",
+				"**Zynq-7000**：XC7Z035，FFG676 封装，速度等级 -2（Xilinx）",
+				"**Zynq-7000**：XC7Z020，CLG484 封装，速度等级 -1（Xilinx）",
+				"**紫光同创 Titan**：Ti60，F100S3F2 封装，速度等级 C4",
+				"**Virtex-7**：XQ7VX690T，RF1158 封装，工业级 -2I（Xilinx）",
+				"**Artix-7**：XC7A50T，CPG236 封装，速度等级 -2（Xilinx）",
+				"**高云 GW1N-9C**：LV（低电压），QN48 封装，C6 速度 / I5 温度",
+				"**高云 GW1N-9C**：UV（超低电压），QN48 封装，C6 速度 / I5 温度",
+				"**高云 GW1N-9C**：LV（低电压），LQ144 封装，C6 速度 / I5 温度",
+				"**高云 GW1N-9C**：UV（超低电压），EQ144 封装，C6 速度 / I5 温度",
+				"**高云 GW1NR-9C**：带 DSP，LV（低电压），QN88P 封装，C6 速度 / I5 温度",
+				"**高云 GW1NSR-4C**：SoC（内置 Cortex-M3），LV（低电压），CQN48P 封装，C6 速度 / I5 温度"
 			]
 		}
 	},

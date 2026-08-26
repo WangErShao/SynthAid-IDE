@@ -91,6 +91,8 @@
     "digital-ide.function.simulate.gtkwavePath.title": "gtkwave 软件的启动路径的绝对路径",
     "digital-ide.function.simulate.xilinxLibPath.title": "仿真用 Xilinx 库的路径",
     "digital-ide.function.simulate.runInTerminal.title": "在终端中运行仿真命令，而不是在输出中运行",
+    "digital-ide.waveviewer.program.title": "波形查看后端：内置（Digital-IDE 查看器）或外部 Surfer 程序",
+    "digital-ide.waveviewer.surferPath.title": "surfer 可执行文件路径或其所在目录。为空或为 surfer 时使用 PATH 中的 surfer。",
     "digital-ide.function.lsp.formatter.vlog.default.style.title": "选择 Verilog 和 SystemVerilog 格式化器样式。",
     "digital-ide.function.lsp.formatter.vlog.default.args.title": "在此处添加 Verilog 格式化器参数（如 istyle）。",
     "digital-ide.function.lsp.formatter.vhdl.default.keyword-case.title": "关键字大小写",

@@ -215,6 +215,7 @@ class PlManage extends BaseManage {
     }
 
     public simulate() {
+        this.ensureToolchain();
         if (this.context.process === undefined) {
             return;
         }
@@ -222,14 +223,17 @@ class PlManage extends BaseManage {
     }
 
     public simulateCli() {
+        this.ensureToolchain();
         this.context.ope.simulateCli(this.context);
     }
 
     public simulateGui() {
+        this.ensureToolchain();
         this.context.ope.simulateGui(this.context);
     }
 
     public refresh() {
+        this.ensureToolchain();
         if (this.context.process === undefined) {
             return;
         }
@@ -237,6 +241,7 @@ class PlManage extends BaseManage {
     }
 
     public build() {
+        this.ensureToolchain();
         if (!this.tryStartRun(['synth', 'impl'])) {
             return;
         }
@@ -244,6 +249,7 @@ class PlManage extends BaseManage {
     }
 
     public synth() {
+        this.ensureToolchain();
         if (!this.tryStartRun(['synth'])) {
             return;
         }
@@ -251,6 +257,7 @@ class PlManage extends BaseManage {
     }
 
     public impl() {
+        this.ensureToolchain();
         if (!this.tryStartRun(['impl'])) {
             return;
         }
@@ -355,18 +362,22 @@ class PlManage extends BaseManage {
     }
 
     public bitstream() {
+        this.ensureToolchain();
         this.context.ope.generateBit(this.context);
     }
 
     public program() {
+        this.ensureToolchain();
         this.context.ope.program(this.context);
     }
 
     public gui() {
+        this.ensureToolchain();
         this.context.ope.gui(this.context);
     }
 
     public async exit() {
+        this.ensureToolchain();
         if (this.context.process === undefined) {
             return;
         }
@@ -424,10 +435,12 @@ class PlManage extends BaseManage {
     }
 
     async addFiles(files: string[]) {
+        this.ensureToolchain();
         this.context.ope.addFiles(files, this.context);
     }
 
     async delFiles(files: string[]) {
+        this.ensureToolchain();
         this.context.ope.delFiles(files, this.context);
     }
 

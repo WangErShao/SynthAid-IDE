@@ -91,6 +91,8 @@
     "digital-ide.function.simulate.gtkwavePath.title": "Absolute path of the launch path of the gtkwave software",
     "digital-ide.function.simulate.xilinxLibPath.title": "Path of the Xilinx library for simulation",
     "digital-ide.function.simulate.runInTerminal.title": "Run the simulation command in the terminal instead of the output",
+    "digital-ide.waveviewer.program.title": "Waveform viewer backend: builtin (Digital-IDE viewer) or external Surfer program",
+    "digital-ide.waveviewer.surferPath.title": "Path to the surfer executable or the folder containing it. If empty or 'surfer', the surfer in PATH is used.",
     "digital-ide.function.lsp.formatter.vlog.default.style.title": "Select the Verilog and SystemVerilog formatter style.",
     "digital-ide.function.lsp.formatter.vlog.default.args.title": "Add Verilog formatter arguments here (like istyle).",
     "digital-ide.function.lsp.formatter.vhdl.default.keyword-case.title": "Keyword case",

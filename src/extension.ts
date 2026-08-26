@@ -12,6 +12,7 @@ import * as lspClient from './function/lsp-client';
 import { refreshArchTree } from './function/treeView';
 import { initialiseI18n, t } from './i18n';
 import { registerLintFix } from './function/lint-fix';
+import { activateJsonAssist } from './function/json-assist';
 
 
 async function registerCommand(context: vscode.ExtensionContext, packageJson: any) {
@@ -22,6 +23,7 @@ async function registerCommand(context: vscode.ExtensionContext, packageJson: an
     func.registerNetlist(context);
     func.registerWaveViewer(context);
     registerLintFix(context);
+    activateJsonAssist(context);
 
     // onCommand 激活事件中的命令
     context.subscriptions.push(

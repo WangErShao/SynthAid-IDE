@@ -118,7 +118,9 @@ class GowinOperation {
         hdlFile.writeFile(tclPath, tclCommands);
 
         context.path = this.updateGowinPath();
-        const cmd = `"${context.path}" -tcl ${tclPath}`;
+        // 注意：gw_sh 不支持 `-tcl <file>`（实测会忽略该参数，脚本不执行）。
+        // 正确做法是交互式启动 gw_sh，再通过 stdin `source <tcl>` 执行创建工程等命令。
+        const cmd = `"${context.path}"`;
 
         const _this = this;
         const onGowinClose = debounce(() => {
@@ -132,6 +134,8 @@ class GowinOperation {
                 return Promise.resolve(undefined);
             }
             const gowinProcess = spawn(cmd, [], { shell: true, stdio: 'pipe', cwd: opeParam.workspacePath });
+            // 交互式会话就绪后，source launch.tcl 执行 create_project / add_file
+            gowinProcess.stdin.write(`source "${tclPath}"\n`);
             let status: 'pending' | 'fulfilled' = 'pending';
             let doneBuffer = '';
 
@@ -368,19 +372,17 @@ class GowinOperation {
     }
 
     /**
-     * @description 从完整 part number 提取 Gowin 器件短名
-     * 例: "GW1N-LV9LQ144C6/I5" -> "GW1N-9C"（programmer_cli --device 需要）
+     * @description 从完整 part number 提取 Gowin 器件短名（programmer_cli --device 需要）
+     * 例: "GW1N-LV9LQ144C6/I5"    -> "GW1N-9C"
+     * 例: "GW1NSR-LV4CQN48PC6/I5" -> "GW1NSR-4C"
      */
     private extractDeviceShortName(device: string): string {
-        // 匹配 GW<series>-<LV/UV><n><pkg> 中的系列号
-        const m = /(GW\d+[A-Z]?R?)-[A-Z]{1,3}\d*[A-Z]?/.exec(device);
+        // GW<系列>-<电压><容量><封装>...<速度>/<温度>
+        // 例: GW1NSR-LV4CQN48PC6/I5 -> 系列 GW1NSR + 容量 4 + 速度等级 C
+        const m = /(GW\d+[A-Z]*)-([A-Z]{0,2})(\d+)/.exec(device);
         if (m) {
-            // GW1N-LV9LQ144 -> GW1N-9 需要加后缀 C（9C）
-            const base = m[1]; // 如 GW1N
-            const numMatch = /-([A-Z]{1,3})(\d+)[A-Z]?/.exec(device);
-            if (numMatch) {
-                return `${base}-${numMatch[2]}`;
-            }
+            const [, series, , capacity] = m;
+            return `${series}-${capacity}${this.deviceVersion}`;
         }
         return device;
     }

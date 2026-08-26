@@ -2,7 +2,7 @@
 
 type Type = {type: string};
 type Desc = {description: string};
-type Enum<T> = {enum: T[]};
+type Enum<T> = {enum: T[]; markdownEnumDescriptions?: string[]};
 type Default<T> = {default: T};
 
 interface PrjInfoSchema {

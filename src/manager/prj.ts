@@ -105,11 +105,35 @@ class PrjManage {
 
         // 创建用户目录
         hdlDir.mkdir(opeParam.dideHome);
-        // 同步部分文件
+        // 同步 property-schema：以扩展自带 schema 为基准，仅合并缓存中用户自定义的 device，
+        // 避免旧缓存整体覆盖导致新版选项（如 toolChain 的 gowin）丢失
         const cachePPySchema = hdlPath.join(opeParam.dideHome, 'property-schema.json');
         const propertySchema = opeParam.propertySchemaPath;
+        const extSchema = hdlFile.readJSON(propertySchema) as PropertySchema;
         if (fs.existsSync(cachePPySchema) && checkJson(cachePPySchema)) {
-            hdlFile.copyFile(cachePPySchema, propertySchema);
+            const cacheSchema = hdlFile.readJSON(cachePPySchema) as PropertySchema;
+            // 合并 device 枚举，并同步补齐 markdownEnumDescriptions，避免长度不匹配导致说明失效
+            const extDevices = extSchema.properties.device.enum || [];
+            const extDeviceDescs = extSchema.properties.device.markdownEnumDescriptions || [];
+            const mergedDevices: string[] = [];
+            const mergedDeviceDescs: string[] = [];
+            for (let i = 0; i < extDevices.length; i++) {
+                mergedDevices.push(extDevices[i]);
+                mergedDeviceDescs.push(extDeviceDescs[i] || `**${extDevices[i]}**`);
+            }
+            for (const device of (cacheSchema.properties?.device?.enum || [])) {
+                if (!mergedDevices.includes(device)) {
+                    mergedDevices.push(device);
+                    mergedDeviceDescs.push(`**${device}**：用户自定义器件`);
+                }
+            }
+            extSchema.properties.device.enum = mergedDevices;
+            extSchema.properties.device.markdownEnumDescriptions = mergedDeviceDescs;
+            hdlFile.writeJSON(propertySchema, extSchema);
+            hdlFile.writeJSON(cachePPySchema, extSchema);
+        } else {
+            // 首次使用：把扩展自带 schema 同步到缓存，后续用户自定义 device 才有处可存
+            hdlFile.copyFile(propertySchema, cachePPySchema);
         }
 
         return refreshPrjConfig;

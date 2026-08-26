@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fspath from 'path';
 import * as fs from 'fs';
+import * as child_process from 'child_process';
 
 import { hdlFile, hdlPath } from '../../hdlFs';
 import { opeParam, ReportType, WaveViewOutput } from '../../global';
@@ -162,7 +163,37 @@ class WaveViewer {
     }
 }
 
+/**
+ * @description 使用外部 surfer 程序打开波形文件（不集成 surfer，插件保持 MIT）
+ * 若 surfer 未安装或路径错误，向用户提示安装与配置方法
+ */
+function launchSurfer(uri: vscode.Uri) {
+    const cfg = vscode.workspace.getConfiguration('digital-ide.waveviewer');
+    let surferPath = cfg.get<string>('surferPath', 'surfer') || 'surfer';
+    if (hdlFile.isDir(surferPath)) {
+        surferPath = hdlPath.join(surferPath, opeParam.os === 'win32' ? 'surfer.exe' : 'surfer');
+    }
+    const child = child_process.spawn(surferPath, [uri.fsPath], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+    });
+    child.unref();
+    child.on('error', (err) => {
+        vscode.window.showErrorMessage(
+            `启动外部 surfer 失败：${err.message}\n` +
+            `请确认已安装 surfer（cargo install surfer 或从 surfer-project.org 下载二进制），` +
+            `并检查配置 "digital-ide.waveviewer.surferPath"（当前值：${surferPath}）。`
+        );
+    });
+}
+
 async function openWaveViewer(context: vscode.ExtensionContext, uri: vscode.Uri) {
+    const program = vscode.workspace.getConfiguration('digital-ide.waveviewer').get<string>('program', 'builtin');
+    if (program === 'surfer') {
+        launchSurfer(uri);
+        return;
+    }
     const viewer = new WaveViewer(context);
     viewer.open(uri);
 }
